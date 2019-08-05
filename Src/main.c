@@ -47,7 +47,7 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-#include "tmc6200.h"
+#include "logic.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -115,17 +115,7 @@ int main(void)
   MX_USB_OTG_FS_USB_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
-
-  tmc6200_init(0);
-  tmc6200_init(1);
-  tmc6200_init(2);
-  tmc6200_init(3);
-
-  HAL_GPIO_WritePin(DRV1_EN_GPIO_Port, DRV1_EN_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(DRV2_EN_GPIO_Port, DRV2_EN_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(DRV3_EN_GPIO_Port, DRV3_EN_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(DRV4_EN_GPIO_Port, DRV4_EN_Pin, GPIO_PIN_SET);
+  logic_init();
 
   /* USER CODE END 2 */
 
@@ -133,21 +123,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(HAL_GPIO_ReadPin(DRV1_STATUS_GPIO_Port, DRV1_STATUS_Pin) ||
-		 HAL_GPIO_ReadPin(DRV2_STATUS_GPIO_Port, DRV2_STATUS_Pin) ||
-		 HAL_GPIO_ReadPin(DRV3_STATUS_GPIO_Port, DRV3_STATUS_Pin) ||
-		 HAL_GPIO_ReadPin(DRV4_STATUS_GPIO_Port, DRV4_STATUS_Pin) ||
-		 HAL_GPIO_ReadPin(DRV1_FAULT_GPIO_Port, DRV1_FAULT_Pin) ||
-		 HAL_GPIO_ReadPin(DRV2_FAULT_GPIO_Port, DRV2_FAULT_Pin) ||
-		 HAL_GPIO_ReadPin(DRV3_FAULT_GPIO_Port, DRV3_FAULT_Pin) ||
-		 HAL_GPIO_ReadPin(DRV4_FAULT_GPIO_Port, DRV4_FAULT_Pin))
-	  {
-		  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
-	  }
-	  else
-	  {
-		  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
-	  }
+	  logic_loop();
 
   /* USER CODE END WHILE */
 
