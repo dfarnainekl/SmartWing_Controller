@@ -28,7 +28,7 @@ void TMC4671_highLevel_openLoopTest(uint8_t drv)
 
 	// Feedback selection
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 0x00000002); //phi e openloop
-	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, 0x000008FF); //ud=255 uq=0
+	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, 0x000008FF); //ud=8FF uq=0
 
 	// ===== Open loop test drive =====
 
@@ -41,10 +41,12 @@ void TMC4671_highLevel_openLoopTest(uint8_t drv)
 
 	// Rotate left
 	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, -60); //velocity target -60
-	HAL_Delay(200000);
+	HAL_Delay(5000);
 
 	// Stop
 	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 0x00000000); //velocity target 0
-	HAL_Delay(2000);
+	HAL_Delay(1000);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, 0x00000000); //ud=0 uq=0
+	HAL_Delay(100);
+	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000000); //PWM off
 }
