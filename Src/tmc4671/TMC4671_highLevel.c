@@ -6,10 +6,10 @@
 void TMC4671_highLevel_openLoopTest(uint8_t drv)
 {
 	// Motor type &  PWM configuration
-	tmc4671_writeInt(drv, TMC4671_MOTOR_TYPE_N_POLE_PAIRS, 0x00030006); //BLDC, 6 pole pairs
+	tmc4671_writeInt(drv, TMC4671_MOTOR_TYPE_N_POLE_PAIRS, (3 << TMC4671_MOTOR_TYPE_SHIFT) | (6 << TMC4671_N_POLE_PAIRS_SHIFT)); //BLDC, 6 pole pairs
 	tmc4671_writeInt(drv, TMC4671_PWM_POLARITIES, 0x00000000); //LS and HS polarity off
-	tmc4671_writeInt(drv, TMC4671_PWM_MAXCNT, 0x000003E7); //999 --> 100kHz PWM
-	tmc4671_writeInt(drv, TMC4671_PWM_BBM_H_BBM_L, 0x00001919); //LS and HS 250ns BBM
+	tmc4671_writeInt(drv, TMC4671_PWM_MAXCNT, 3999); //3999 --> 25kHz PWM
+	tmc4671_writeInt(drv, TMC4671_PWM_BBM_H_BBM_L, (10 << TMC4671_PWM_BBM_H_SHIFT) | (10 << TMC4671_PWM_BBM_L_SHIFT)); //LS and HS 100ns BBM
 	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000007); //centered PWM for FOC, Space Vector PWM disabled
 
 	// ADC configuration
@@ -28,7 +28,7 @@ void TMC4671_highLevel_openLoopTest(uint8_t drv)
 
 	// Feedback selection
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 0x00000002); //phi e openloop
-	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, 0x000008FF); //ud=8FF uq=0
+	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2000 << TMC4671_UD_EXT_SHIFT)); //uq=0, ud=2000
 
 	// ===== Open loop test drive =====
 
@@ -36,16 +36,16 @@ void TMC4671_highLevel_openLoopTest(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0x00000008); // uq_ud_ext
 
 	// Rotate right
-	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 60); //velocity target 60
-	HAL_Delay(5000);
+	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 1); //velocity target 1
+	HAL_Delay(20000);
 
 	// Rotate left
-	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, -60); //velocity target -60
-	HAL_Delay(5000);
+	//tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, -1); //velocity target -1
+	//HAL_Delay(5000);
 
 	// Stop
 	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 0x00000000); //velocity target 0
-	HAL_Delay(1000);
+	HAL_Delay(2000);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, 0x00000000); //ud=0 uq=0
 	HAL_Delay(100);
 	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000000); //PWM off
