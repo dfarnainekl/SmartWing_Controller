@@ -1,6 +1,7 @@
 #include "tmc4671/TMC4671_highLevel.h"
 #include "tmc4671/TMC4671.h"
 #include "stm32h7xx_hal.h"
+#include "swdriver.h"
 
 
 void TMC4671_highLevel_init(uint8_t drv)
@@ -19,14 +20,14 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_dsADC_MCLK_A, (1 << 29)); // group a clock frequency 25MHz
 	tmc4671_writeInt(drv, TMC4671_dsADC_MCLK_B, 0); // group b clock frequency 0 --> off
 	tmc4671_writeInt(drv, TMC4671_dsADC_MDEC_B_MDEC_A, (1330 << TMC4671_DSADC_MDEC_B_SHIFT) | (1330 << TMC4671_DSADC_MDEC_A_SHIFT)); // decimation ratio FIXME adapt to clock
-	tmc4671_writeInt(drv, TMC4671_ADC_I0_SCALE_OFFSET, (-490 << TMC4671_ADC_I0_SCALE_SHIFT) | (38888 << TMC4671_ADC_I0_OFFSET_SHIFT)); // offset, scale 2mA/lsb
-	tmc4671_writeInt(drv, TMC4671_ADC_I1_SCALE_OFFSET, (-490 << TMC4671_ADC_I1_SCALE_SHIFT) | (36260 << TMC4671_ADC_I1_OFFSET_SHIFT)); // offset, scale 2mA/lsb
+	tmc4671_writeInt(drv, TMC4671_ADC_I0_SCALE_OFFSET, (-490 << TMC4671_ADC_I0_SCALE_SHIFT) | (swdriver[drv].ofs_i0 << TMC4671_ADC_I0_OFFSET_SHIFT)); // offset, scale 2mA/lsb
+	tmc4671_writeInt(drv, TMC4671_ADC_I1_SCALE_OFFSET, (-490 << TMC4671_ADC_I1_SCALE_SHIFT) | (swdriver[drv].ofs_i1 << TMC4671_ADC_I1_OFFSET_SHIFT)); // offset, scale 2mA/lsb
 
 	// ABN encoder settings
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0x00000000); // TODO
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PPR, 2048); // decoder pulses per revolution
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // TODO write current decoder angle
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, (0 << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) | (0 << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT)); // TODO
+	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, (swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) | (swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT)); // TODO
 
 	// Limits
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 5000); // torque/flux limit 10A TODO: increase

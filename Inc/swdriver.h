@@ -6,6 +6,31 @@
 #include "spi.h"
 
 
+#define DRV0_OFFSET_I0 38888
+#define DRV0_OFFSET_I1 36260
+#define DRV0_OFFSET_ENC_PHIM 0
+#define DRV0_OFFSET_ENC_PHIE 0
+#define DRV0_OFFSET_PHIM_PHIE (DRV0_OFFSET_ENC_PHIE - 7 * DRV0_OFFSET_ENC_PHIM)
+
+#define DRV1_OFFSET_I0 38888
+#define DRV1_OFFSET_I1 36260
+#define DRV1_OFFSET_ENC_PHIM 0
+#define DRV1_OFFSET_ENC_PHIE 0
+#define DRV1_OFFSET_PHIM_PHIE (DRV0_OFFSET_ENC_PHIE - 7 * DRV0_OFFSET_ENC_PHIM)
+
+#define DRV2_OFFSET_I0 38888
+#define DRV2_OFFSET_I1 36260
+#define DRV2_OFFSET_ENC_PHIM 0
+#define DRV2_OFFSET_ENC_PHIE 0
+#define DRV2_OFFSET_PHIM_PHIE (DRV0_OFFSET_ENC_PHIE - 7 * DRV0_OFFSET_ENC_PHIM)
+
+#define DRV3_OFFSET_I0 38888
+#define DRV3_OFFSET_I1 36260
+#define DRV3_OFFSET_ENC_PHIM 0
+#define DRV3_OFFSET_ENC_PHIE 0
+#define DRV3_OFFSET_PHIM_PHIE (DRV0_OFFSET_ENC_PHIE - 7 * DRV0_OFFSET_ENC_PHIM)
+
+
 typedef struct swdriver_s
 {
 	GPIO_TypeDef* EN_port;
@@ -21,6 +46,10 @@ typedef struct swdriver_s
 	GPIO_TypeDef* CSN_ENC_port;
 	uint16_t      CSN_ENC_pin;
 	SPI_HandleTypeDef* SPI;
+	uint16_t ofs_i0;
+	uint16_t ofs_i1;
+	int16_t ofs_enc_phim;
+	int16_t ofs_phim_phie;
 } swdriver_t;
 
 
