@@ -15,7 +15,9 @@ void logic_init(void)
 
 	for(i=0; i<4; i++) swdriver_setEnable(i, true);
 
-	TMC4671_highLevel_openLoopTest(3);
+	TMC4671_highLevel_init(3);
+	//TMC4671_highLevel_openLoopTest(3);
+	TMC4671_highLevel_torqueTest(3);
 }
 
 
