@@ -16,10 +16,10 @@ void TMC4671_highLevel_init(uint8_t drv)
 	// ADC configuration
 	tmc4671_writeInt(drv, TMC4671_ADC_I_SELECT, 0x24000100); // adcs for current measurement, default assignment (ux=0 v=1 wy=2)
 //	tmc4671_writeInt(drv, TMC4671_dsADC_MCFG_B_MCFG_A, 0); // internal ds-modulator, MCLK for both groups FIXME make this work
-	tmc4671_writeInt(drv, TMC4671_dsADC_MCFG_B_MCFG_A, 0x00100010); // internal ds-modulator, CLK (100MHz) for both groups
+	tmc4671_writeInt(drv, TMC4671_dsADC_MCFG_B_MCFG_A, 0x00100010); // internal ds-modulator, CLK (100MHz) for both groups FIXME bits might actually be inverted
 	tmc4671_writeInt(drv, TMC4671_dsADC_MCLK_A, (1 << 29)); // group a clock frequency 25MHz
 	tmc4671_writeInt(drv, TMC4671_dsADC_MCLK_B, 0); // group b clock frequency 0 --> off
-	tmc4671_writeInt(drv, TMC4671_dsADC_MDEC_B_MDEC_A, (1330 << TMC4671_DSADC_MDEC_B_SHIFT) | (1330 << TMC4671_DSADC_MDEC_A_SHIFT)); // decimation ratio FIXME adapt to clock
+	tmc4671_writeInt(drv, TMC4671_dsADC_MDEC_B_MDEC_A, (1000 << TMC4671_DSADC_MDEC_B_SHIFT) | (1000 << TMC4671_DSADC_MDEC_A_SHIFT)); // decimation ratio FIXME adapt to clock
 	tmc4671_writeInt(drv, TMC4671_ADC_I0_SCALE_OFFSET, (-490 << TMC4671_ADC_I0_SCALE_SHIFT) | (swdriver[drv].ofs_i0 << TMC4671_ADC_I0_OFFSET_SHIFT)); // offset, scale 2mA/lsb
 	tmc4671_writeInt(drv, TMC4671_ADC_I1_SCALE_OFFSET, (-490 << TMC4671_ADC_I1_SCALE_SHIFT) | (swdriver[drv].ofs_i1 << TMC4671_ADC_I1_OFFSET_SHIFT)); // offset, scale 2mA/lsb
 
@@ -61,11 +61,11 @@ void TMC4671_highLevel_torqueTest(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 1); // torque_mode
 
 	// Rotate right
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target 1000
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target 1000 (2A)
 	HAL_Delay(3000);
 
 	// Rotate left
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (-1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target -1000
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (-1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target -1000 (-2A)
 	HAL_Delay(3000);
 
 	// Stop
