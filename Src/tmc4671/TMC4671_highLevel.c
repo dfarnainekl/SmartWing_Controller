@@ -27,8 +27,10 @@ void TMC4671_highLevel_init(uint8_t drv)
 	// ABN encoder settings
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0); // standard polarity and count direction, don't clear at n pulse
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PPR, 2048); // decoder pulses per revolution
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, as5147_getAngle(drv)); // current decoder angle
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, (swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) | (swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT)); // TODO
+	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // decoder angle 0 FIXME: writing anything else doesn't work but writing current angle would allow for more elegant solution. the 2 lines below could be deleted, see git history
+	uint16_t angle_current = as5147_getAngle(drv);  // current decoder angle
+	swdriver[drv].ofs_enc_phim += (angle_current << 5);
+	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((uint16_t)swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) | ((uint16_t)swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT)); // TODO
 
 	// Limits
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 5000); // torque/flux limit 10A TODO: increase
@@ -84,11 +86,11 @@ void TMC4671_highLevel_torqueTest(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 1); // torque_mode
 
 	// Rotate right
-//	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target 1000 (2A)
-//	HAL_Delay(3000);
-//
-//	// Rotate left
-//	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (-1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target -1000 (-2A)
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target 1000 (2A)
+	HAL_Delay(3000);
+
+	// Rotate left
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (-1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target -1000 (-2A)
 	HAL_Delay(3000);
 
 	// Stop
