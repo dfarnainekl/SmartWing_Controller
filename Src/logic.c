@@ -19,7 +19,8 @@ void logic_init(void)
 	TMC4671_highLevel_init(3);
 	//TMC4671_highLevel_openLoopTest(3);
 	//TMC4671_highLevel_printOffsetAngle(3);
-	TMC4671_highLevel_torqueTest(3);
+	//TMC4671_highLevel_torqueTest(3);
+	TMC4671_highLevel_positionTest(3);
 
 	TMC4671_highLevel_pwmOff(3);
 

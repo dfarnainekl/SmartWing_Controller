@@ -28,7 +28,7 @@
 #define DRV3_OFFSET_I1 36109
 #define DRV3_OFFSET_ENC_PHIM -15232 // -encoder zero angle (16bit) -15232
 #define DRV3_OFFSET_ENC_PHIE -10752 // -encoder zero angle (16bit) -10752
-#define DRV3_OFFSET_PHIM_PHIE 30336 //(DRV0_OFFSET_ENC_PHIE - (7 * DRV0_OFFSET_ENC_PHIM)) //FIXME this calculation does not work
+#define DRV3_OFFSET_PHIM_PHIE 30336 //((int16_t)DRV0_OFFSET_ENC_PHIE - (7 * (int16_t)DRV0_OFFSET_ENC_PHIM)) // FIXME this calculation does not work
 
 
 typedef struct swdriver_s
