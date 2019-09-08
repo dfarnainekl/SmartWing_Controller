@@ -2,7 +2,8 @@
 #include "tmc4671/TMC4671.h"
 #include "stm32h7xx_hal.h"
 #include "swdriver.h"
-
+#include "usart.h"
+#include "as5147.h"
 
 void TMC4671_highLevel_init(uint8_t drv)
 {
@@ -24,9 +25,9 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_ADC_I1_SCALE_OFFSET, (-490 << TMC4671_ADC_I1_SCALE_SHIFT) | (swdriver[drv].ofs_i1 << TMC4671_ADC_I1_OFFSET_SHIFT)); // offset, scale 2mA/lsb
 
 	// ABN encoder settings
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0x00000000); // TODO
+	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0); // standard polarity and count direction, don't clear at n pulse
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PPR, 2048); // decoder pulses per revolution
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // TODO write current decoder angle
+	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, as5147_getAngle(drv)); // current decoder angle
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, (swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) | (swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT)); // TODO
 
 	// Limits
@@ -38,19 +39,41 @@ void TMC4671_highLevel_init(uint8_t drv)
 }
 
 
-void TMC4671_highLevel_torqueTest(uint8_t drv)
+void TMC4671_highLevel_pwmOff(uint8_t drv)
 {
-	// ===== ABN encoder test drive =====
+	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000000); // PWM off
+}
 
-	// Init encoder (mode 0)
+
+void TMC4671_highLevel_printOffsetAngle(uint8_t drv)
+{
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 8); // uq_ud_ext
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, 0x00000000);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 1);  // phi_e_ext
 	tmc4671_writeInt(drv, TMC4671_PHI_E_EXT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2000 << TMC4671_UD_EXT_SHIFT)); // uq=0, ud=2000
 	HAL_Delay(1000);
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0);
+
+	char string[64];
+	uint16_t angle = as5147_getAngle(drv);
+	uint16_t len = snprintf(string, 64, "\n\n\ndriver %d encoder zero angle: %d (11bit) %d (16bit)\n", drv, angle, (int16_t)(angle << 5));
+	HAL_UART_Transmit(&huart3, (uint8_t*)string, len, 100000000);
+
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
+}
+
+
+void TMC4671_highLevel_torqueTest(uint8_t drv)
+{
+//	// Init encoder (mode 0)
+//	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 8); // uq_ud_ext
+//	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, 0x00000000);
+//	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 1);  // phi_e_ext
+//	tmc4671_writeInt(drv, TMC4671_PHI_E_EXT, 0);
+//	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2000 << TMC4671_UD_EXT_SHIFT)); // uq=0, ud=2000
+//	HAL_Delay(1000);
+//	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0);
+//	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
 
 	// Feedback selection
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 3); // phi_e_abn
@@ -61,17 +84,15 @@ void TMC4671_highLevel_torqueTest(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 1); // torque_mode
 
 	// Rotate right
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target 1000 (2A)
-	HAL_Delay(3000);
-
-	// Rotate left
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (-1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target -1000 (-2A)
+//	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target 1000 (2A)
+//	HAL_Delay(3000);
+//
+//	// Rotate left
+//	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (-1000 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target -1000 (-2A)
 	HAL_Delay(3000);
 
 	// Stop
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET, (0 << TMC4671_PID_TORQUE_TARGET_SHIFT)); // torque target 0
-	HAL_Delay(100);
-	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000000); // PWM off
 }
 
 
@@ -103,6 +124,4 @@ void TMC4671_highLevel_openLoopTest(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 0); // velocity target 0
 	HAL_Delay(2000);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
-	HAL_Delay(100);
-	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000000); // PWM off
 }

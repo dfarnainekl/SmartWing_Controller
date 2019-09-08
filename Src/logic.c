@@ -2,7 +2,8 @@
 #include "swdriver.h"
 #include "tmc6200/TMC6200_highLevel.h"
 #include "tmc4671/TMC4671_highLevel.h"
-
+#include "as5147.h"
+#include "usart.h"
 
 void logic_init(void)
 {
@@ -17,7 +18,19 @@ void logic_init(void)
 
 	TMC4671_highLevel_init(3);
 	//TMC4671_highLevel_openLoopTest(3);
-	TMC4671_highLevel_torqueTest(3);
+	//TMC4671_highLevel_printOffsetAngle(3);
+	//TMC4671_highLevel_torqueTest(3);
+
+	TMC4671_highLevel_pwmOff(3);
+
+	while(1)
+	{
+		char string[64];
+		uint16_t angle = as5147_getAngle(3);
+		uint16_t len = snprintf(string, 64, "driver %d encoder angle: %d (11bit) %d (16bit)\n", 3, angle, (int16_t)(angle << 5));
+		HAL_UART_Transmit(&huart3, (uint8_t*)string, len, 100000000);
+		HAL_Delay(100);
+	}
 }
 
 

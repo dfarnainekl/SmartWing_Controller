@@ -63,6 +63,14 @@
 #define DRV3_CSN_CTR_GPIO_Port GPIOH
 #define DRV4_CSN_DRV_Pin GPIO_PIN_0
 #define DRV4_CSN_DRV_GPIO_Port GPIOC
+#define PWM_IN_0_Pin GPIO_PIN_0
+#define PWM_IN_0_GPIO_Port GPIOA
+#define PWM_IN_1_Pin GPIO_PIN_1
+#define PWM_IN_1_GPIO_Port GPIOA
+#define PWM_IN_2_Pin GPIO_PIN_2
+#define PWM_IN_2_GPIO_Port GPIOA
+#define PWM_IN_3_Pin GPIO_PIN_3
+#define PWM_IN_3_GPIO_Port GPIOA
 #define DRV4_CSN_ENC_Pin GPIO_PIN_4
 #define DRV4_CSN_ENC_GPIO_Port GPIOC
 #define DRV3_CSN_ENC_Pin GPIO_PIN_5

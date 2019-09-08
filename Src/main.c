@@ -42,6 +42,7 @@
 #include "fdcan.h"
 #include "i2c.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "usb_otg.h"
 #include "gpio.h"
@@ -107,12 +108,11 @@ int main(void)
   MX_SPI2_Init();
   MX_SPI3_Init();
   MX_SPI4_Init();
-  MX_UART4_Init();
   MX_UART7_Init();
-  MX_UART8_Init();
-  MX_USART2_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_USB_Init();
+  MX_UART8_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   logic_init();
@@ -196,8 +196,7 @@ void SystemClock_Config(void)
     _Error_Handler(__FILE__, __LINE__);
   }
 
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_USART2
-                              |RCC_PERIPHCLK_UART4|RCC_PERIPHCLK_UART7
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_UART7
                               |RCC_PERIPHCLK_FDCAN|RCC_PERIPHCLK_UART8
                               |RCC_PERIPHCLK_SPI4|RCC_PERIPHCLK_SPI3
                               |RCC_PERIPHCLK_SPI1|RCC_PERIPHCLK_SPI2
@@ -241,6 +240,9 @@ void _Error_Handler(char *file, int line)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+	char string[64];
+	uint16_t len = snprintf(string, 32, "\n\n\nHAL error in file %s line %d\n", file, line);
+	HAL_UART_Transmit(&huart3, (uint8_t*)string, len, 100000000);
   while(1)
   {
   }

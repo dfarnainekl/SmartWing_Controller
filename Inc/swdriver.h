@@ -26,8 +26,8 @@
 
 #define DRV3_OFFSET_I0 38756 //FIXME offsets are changing!?
 #define DRV3_OFFSET_I1 36109
-#define DRV3_OFFSET_ENC_PHIM 0
-#define DRV3_OFFSET_ENC_PHIE 0
+#define DRV3_OFFSET_ENC_PHIM -10752 // - encoder_zero_angle (16bit) -10752
+#define DRV3_OFFSET_ENC_PHIE -10752 // - encoder_zero_angle (16bit) -10752
 #define DRV3_OFFSET_PHIM_PHIE (DRV0_OFFSET_ENC_PHIE - 7 * DRV0_OFFSET_ENC_PHIM)
 
 

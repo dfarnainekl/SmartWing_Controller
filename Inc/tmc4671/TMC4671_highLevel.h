@@ -6,6 +6,8 @@
 
 
 void TMC4671_highLevel_init(uint8_t drv);
+void TMC4671_highLevel_pwmOff(uint8_t drv);
+void TMC4671_highLevel_printOffsetAngle(uint8_t drv);
 void TMC4671_highLevel_torqueTest(uint8_t drv);
 void TMC4671_highLevel_openLoopTest(uint8_t drv);
 
