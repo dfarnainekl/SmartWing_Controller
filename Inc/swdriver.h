@@ -6,29 +6,31 @@
 #include "spi.h"
 
 
-#define DRV0_OFFSET_I0 38888
-#define DRV0_OFFSET_I1 36260
-#define DRV0_OFFSET_ENC_PHIM 0
-#define DRV0_OFFSET_ENC_PHIE 0
-#define DRV0_OFFSET_PHIM_PHIE (DRV0_OFFSET_ENC_PHIE - 7 * DRV0_OFFSET_ENC_PHIM)
+#define DRV0_OFFSET_I0 			38756 	//FIXME offsets are changing!?
+#define DRV0_OFFSET_I1 			36109
+#define DRV0_OFFSET_ENC_PHIM 	14528 	// negative encoder zero mechanical angle (signed 16bit)
+#define DRV0_OFFSET_ENC_PHIE 	-19488 	// negative encoder zero electrical angle (signed 16bit)
 
-#define DRV1_OFFSET_I0 38888
-#define DRV1_OFFSET_I1 36260
-#define DRV1_OFFSET_ENC_PHIM 0
-#define DRV1_OFFSET_ENC_PHIE 0
-#define DRV1_OFFSET_PHIM_PHIE (DRV0_OFFSET_ENC_PHIE - 7 * DRV0_OFFSET_ENC_PHIM)
+#define DRV1_OFFSET_I0 			38756
+#define DRV1_OFFSET_I1 			36109
+#define DRV1_OFFSET_ENC_PHIM 	0 		// negative encoder zero mechanical angle (signed 16bit)
+#define DRV1_OFFSET_ENC_PHIE 	0 		// negative encoder zero electrical angle (signed 16bit)
 
-#define DRV2_OFFSET_I0 38888
-#define DRV2_OFFSET_I1 36260
-#define DRV2_OFFSET_ENC_PHIM 0
-#define DRV2_OFFSET_ENC_PHIE 0
-#define DRV2_OFFSET_PHIM_PHIE (DRV0_OFFSET_ENC_PHIE - 7 * DRV0_OFFSET_ENC_PHIM)
+#define DRV2_OFFSET_I0 			38756
+#define DRV2_OFFSET_I1 			36109
+#define DRV2_OFFSET_ENC_PHIM 	0 		// negative encoder zero mechanical angle (signed 16bit)
+#define DRV2_OFFSET_ENC_PHIE 	0 		// negative encoder zero electrical angle (signed 16bit)
 
-#define DRV3_OFFSET_I0 38756 //FIXME offsets are changing!?
-#define DRV3_OFFSET_I1 36109
-#define DRV3_OFFSET_ENC_PHIM -15232 // -encoder zero angle (16bit) -15232
-#define DRV3_OFFSET_ENC_PHIE -10752 // -encoder zero angle (16bit) -10752
-#define DRV3_OFFSET_PHIM_PHIE 30336 //((int16_t)DRV0_OFFSET_ENC_PHIE - (7 * (int16_t)DRV0_OFFSET_ENC_PHIM)) // FIXME this calculation does not work
+#define DRV3_OFFSET_I0 			38756
+#define DRV3_OFFSET_I1 			36109
+#define DRV3_OFFSET_ENC_PHIM 	0 		// negative encoder zero mechanical angle (signed 16bit)
+#define DRV3_OFFSET_ENC_PHIE 	0 		// negative encoder zero electrical angle (signed 16bit)
+
+
+#define DRV0_OFFSET_PHIM_PHIE ((int16_t)((-7)*((int32_t)DRV0_OFFSET_ENC_PHIE + (int32_t)DRV0_OFFSET_ENC_PHIM)))
+#define DRV1_OFFSET_PHIM_PHIE ((int16_t)((-7)*((int32_t)DRV0_OFFSET_ENC_PHIE + (int32_t)DRV0_OFFSET_ENC_PHIM)))
+#define DRV2_OFFSET_PHIM_PHIE ((int16_t)((-7)*((int32_t)DRV0_OFFSET_ENC_PHIE + (int32_t)DRV0_OFFSET_ENC_PHIM)))
+#define DRV3_OFFSET_PHIM_PHIE ((int16_t)((-7)*((int32_t)DRV0_OFFSET_ENC_PHIE + (int32_t)DRV0_OFFSET_ENC_PHIM)))
 
 
 typedef struct swdriver_s
@@ -54,9 +56,6 @@ typedef struct swdriver_s
 
 
 extern swdriver_t swdriver[4];
-
-
-//#define SWDRIVER_SPI(i) swdriver[i].SPI;
 
 
 //TODO: make those inline, but correctly

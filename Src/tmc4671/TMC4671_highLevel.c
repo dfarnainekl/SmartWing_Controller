@@ -5,6 +5,7 @@
 #include "usart.h"
 #include "as5147.h"
 
+//TODO: use functions from TMC4671.c, use masking
 void TMC4671_highLevel_init(uint8_t drv)
 {
 	// Motor type &  PWM configuration
@@ -30,8 +31,8 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // decoder angle 0 FIXME: writing anything else doesn't work but writing current angle would allow for more elegant solution. 2 lines below could be deleted, see git history
 	uint16_t angle_current = (as5147_getAngle(drv) << 5);  // current decoder angle
 	swdriver[drv].ofs_enc_phim += angle_current;
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((uint16_t)swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) | ((uint16_t)swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT)); // TODO
-	//tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, swdriver[drv].ofs_enc_phim); //current position, same as offset as no movement yet
+	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) & 0xFFFF0000) | ((swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT) & 0x0000FFFF));
+	//TODO: set position 0?
 
 	// Feedback selection
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 3); // phi_e_abn
@@ -46,8 +47,8 @@ void TMC4671_highLevel_init(uint8_t drv)
 	//TODO: position limits
 
 	// PI settings
-	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (379 << TMC4671_PID_FLUX_P_SHIFT) | (3853 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (379 << TMC4671_PID_TORQUE_P_SHIFT) | (3853 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO
+	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (243 << TMC4671_PID_FLUX_P_SHIFT) | (4757 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (243 << TMC4671_PID_TORQUE_P_SHIFT) | (4757 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (3000 << TMC4671_PID_VELOCITY_P_SHIFT) | (50 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (350 << TMC4671_PID_POSITION_P_SHIFT) | (35 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO
 }
@@ -56,6 +57,26 @@ void TMC4671_highLevel_init(uint8_t drv)
 void TMC4671_highLevel_pwmOff(uint8_t drv)
 {
 	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000000); // PWM off
+}
+
+
+void TMC4671_highLevel_positionMode(uint8_t drv)
+{
+	// Switch to position mode
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // position target 0
+	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
+}
+
+
+void TMC4671_highLevel_setPosition(uint8_t drv, int32_t position)
+{
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, position); // position target
+}
+
+
+void TMC4671_highLevel_setPosition_nonBlocking(uint8_t drv, int32_t position)
+{
+	tmc4671_writeInt_nonBlocking(drv, TMC4671_PID_POSITION_TARGET, position); // position target
 }
 
 
@@ -90,19 +111,19 @@ void TMC4671_highLevel_initEncoder(uint8_t drv)
 }
 
 
-void TMC4671_highLevel_positionTest(uint8_t drv) //TODO
+void TMC4671_highLevel_positionTest(uint8_t drv)
 {
-	// Switch to torque mode
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, (0 << TMC4671_PID_POSITION_TARGET_SHIFT)); // position target 0
+	// Switch to position mode
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // position target 0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
 
 	// move
 	uint8_t i;
 	for(i=0; i<4; i++)
 	{
-		tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, (65535 << TMC4671_PID_POSITION_TARGET_SHIFT)); // position target 65535
+		tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 65535); // position target 65535
 		HAL_Delay(2000);
-		tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, (0 << TMC4671_PID_POSITION_TARGET_SHIFT)); // position target 0
+		tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // position target 0
 		HAL_Delay(2000);
 	}
 

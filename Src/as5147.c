@@ -25,7 +25,7 @@ static void spiMode_reset(uint8_t drv)
 	HAL_Delay(2);
 }
 
-uint16_t as5147_getAngle(uint8_t drv)
+uint16_t as5147_getAngle(uint8_t drv) //returns 11bit value
 {
 	spiMode_set(drv);
 
@@ -48,5 +48,5 @@ uint16_t as5147_getAngle(uint8_t drv)
 
 	spiMode_reset(drv);
 
-	return ((((((uint16_t)rxData[0]) & 0x3F) << 8) | rxData[1]) >> 2);
+	return ((((((uint16_t)rxData[0]) & 0x3F) << 8) | rxData[1]) >> 3);
 }

@@ -46,6 +46,28 @@ void tmc4671_writeInt(uint8_t motor, uint8_t address, int32_t value)
 	swdriver_setCsnController(motor, true);
 }
 
+void tmc4671_writeInt_nonBlocking(uint8_t motor, uint8_t address, int32_t value) //TODO: make every write non blocking and just wait for previous transaction done?
+{
+	uint8_t data[5];
+	data[0] = address | 0x80;
+	data[1] = 0xFF & (value>>24);
+	data[2] = 0xFF & (value>>16);
+	data[3] = 0xFF & (value>>8);
+	data[4] = 0xFF & (value>>0);
+
+	swdriver_setCsnController(motor, false);
+	HAL_SPI_Transmit_IT(swdriver[motor].SPI, data, 5);
+}
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) //FIXME: pfusch
+{
+	if(hspi == &hspi1)      {swdriver_setCsnController(0, true); swdriver_setCsnDriver(0, true); swdriver_setCsnEncoder(0, true);}
+	else if(hspi == &hspi2) {swdriver_setCsnController(1, true); swdriver_setCsnDriver(1, true); swdriver_setCsnEncoder(1, true);}
+	else if(hspi == &hspi3) {swdriver_setCsnController(2, true); swdriver_setCsnDriver(2, true); swdriver_setCsnEncoder(2, true);}
+	else if(hspi == &hspi4) {swdriver_setCsnController(3, true); swdriver_setCsnDriver(3, true); swdriver_setCsnEncoder(3, true);}
+}
+
+
 uint16_t tmc4671_readRegister16BitValue(uint8_t motor, uint8_t address, uint8_t channel)
 {
 	int32_t registerValue = tmc4671_readInt(motor, address);
