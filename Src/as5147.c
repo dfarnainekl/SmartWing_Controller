@@ -34,7 +34,7 @@ uint16_t as5147_getAngle(uint8_t drv) //returns 11bit value
 	txData[1] = 0xFF; // address lower 6 bits
 
 	swdriver_setCsnEncoder(drv, false);
-	HAL_SPI_Transmit(swdriver[drv].SPI, txData, 2, 10000000); //FIXME timeout
+	HAL_SPI_Transmit(swdriver[drv].SPI, txData, 2, HAL_MAX_DELAY);
 	swdriver_setCsnEncoder(drv, true);
 	HAL_Delay(2);
 
@@ -43,7 +43,7 @@ uint16_t as5147_getAngle(uint8_t drv) //returns 11bit value
 	uint8_t rxData[2];
 
 	swdriver_setCsnEncoder(drv, false);
-	HAL_SPI_TransmitReceive(swdriver[drv].SPI, txData, rxData, 2, 10000000); //FIXME timeout
+	HAL_SPI_TransmitReceive(swdriver[drv].SPI, txData, rxData, 2, HAL_MAX_DELAY);
 	swdriver_setCsnEncoder(drv, true);
 
 	spiMode_reset(drv);

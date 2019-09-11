@@ -26,7 +26,7 @@ int32_t tmc4671_readInt(uint8_t motor, uint8_t address)
 	uint8_t rxData[5];
 
 	swdriver_setCsnController(motor, false);
-	HAL_SPI_TransmitReceive(swdriver[motor].SPI, txData, rxData, 5, 10000000); //FIXME timeout
+	HAL_SPI_TransmitReceive(swdriver[motor].SPI, txData, rxData, 5, HAL_MAX_DELAY);
 	swdriver_setCsnController(motor, true);
 
 	return (int)((rxData[3] << 24) | (rxData[2] << 16) | (rxData[1] << 8) | (rxData[0] << 0));
@@ -42,7 +42,7 @@ void tmc4671_writeInt(uint8_t motor, uint8_t address, int32_t value)
 	data[4] = 0xFF & (value>>0);
 
 	swdriver_setCsnController(motor, false);
-	HAL_SPI_Transmit(swdriver[motor].SPI, data, 5, 10000000); //FIXME timeout
+	HAL_SPI_Transmit(swdriver[motor].SPI, data, 5, HAL_MAX_DELAY);
 	swdriver_setCsnController(motor, true);
 }
 

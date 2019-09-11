@@ -8,6 +8,8 @@
 //TODO: use functions from TMC4671.c, use masking
 void TMC4671_highLevel_init(uint8_t drv)
 {
+	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0); // stopped_mode
+
 	// Motor type &  PWM configuration
 	tmc4671_writeInt(drv, TMC4671_MOTOR_TYPE_N_POLE_PAIRS, (3 << TMC4671_MOTOR_TYPE_SHIFT) | (7 << TMC4671_N_POLE_PAIRS_SHIFT)); // BLDC, 7 pole pairs
 	tmc4671_writeInt(drv, TMC4671_PWM_POLARITIES, 0); // LS and HS polarity off
@@ -28,11 +30,11 @@ void TMC4671_highLevel_init(uint8_t drv)
 	// ABN encoder settings
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0); // standard polarity and count direction, don't clear at n pulse
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PPR, 2048); // decoder pulses per revolution
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // decoder angle 0 FIXME: writing anything else doesn't work but writing current angle would allow for more elegant solution. 2 lines below could be deleted, see git history
+	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // decoder angle 0 FIXME: writing anything else doesn't work but writing current angle would allow for more elegant solution. 3 lines below could be deleted, see git history
 	uint16_t angle_current = (as5147_getAngle(drv) << 5);  // current decoder angle
 	swdriver[drv].ofs_enc_phim += angle_current;
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) & 0xFFFF0000) | ((swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT) & 0x0000FFFF));
-	//TODO: set position 0?
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, swdriver[drv].ofs_enc_phim); // set position to current position
 
 	// Feedback selection
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 3); // phi_e_abn
@@ -40,17 +42,18 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_POSITION_SELECTION, 9); // phi_m_abn
 
 	// Limits
-	//TODO: UQ/UD limit
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 5000); // torque/flux limit 10A TODO: increase
-	tmc4671_writeInt(drv, TMC4671_PID_ACCELERATION_LIMIT, 50000); // acceleation limit 50000 TODO
-	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_LIMIT, 800); // velocity_limit 1000 TODO
-	//TODO: position limits
+	tmc4671_writeInt(drv, TMC4671_PIDOUT_UQ_UD_LIMITS, 23169); // UQ/UD limit TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 5000); // torque/flux limit 10A TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_ACCELERATION_LIMIT, 50000); // acceleration limit 50000 TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_LIMIT, 800); // velocity limit 1000 TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_LOW, -16383); // position lower limit, -90°  TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_HIGH, 16383); // position upper limit, 90°  TODO optimize
 
 	// PI settings
-	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (243 << TMC4671_PID_FLUX_P_SHIFT) | (4757 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (243 << TMC4671_PID_TORQUE_P_SHIFT) | (4757 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO
-	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (3000 << TMC4671_PID_VELOCITY_P_SHIFT) | (50 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (350 << TMC4671_PID_POSITION_P_SHIFT) | (35 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO
+	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (243 << TMC4671_PID_FLUX_P_SHIFT) | (4757 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (243 << TMC4671_PID_TORQUE_P_SHIFT) | (4757 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (1500 << TMC4671_PID_VELOCITY_P_SHIFT) | (100 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (350 << TMC4671_PID_POSITION_P_SHIFT) | (35 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
 }
 
 
@@ -65,6 +68,26 @@ void TMC4671_highLevel_positionMode(uint8_t drv)
 	// Switch to position mode
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // position target 0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
+}
+
+void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv)
+{
+	// Switch to position mode
+	uint16_t torque_flux_limit = 5000;//tmc4671_readInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS);
+
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 0);
+
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // position target 0
+	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
+
+	uint16_t torque_flux = 0;
+	while(torque_flux < torque_flux_limit)
+	{
+		torque_flux += 100;
+		if(torque_flux > torque_flux_limit) torque_flux = torque_flux_limit;
+		tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux);
+		HAL_Delay(1);
+	}
 }
 
 

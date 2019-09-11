@@ -9,6 +9,7 @@ void TMC4671_highLevel_init(uint8_t drv);
 
 void TMC4671_highLevel_pwmOff(uint8_t drv);
 void TMC4671_highLevel_positionMode(uint8_t drv);
+void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv);
 void TMC4671_highLevel_setPosition(uint8_t drv, int32_t position);
 void TMC4671_highLevel_setPosition_nonBlocking(uint8_t drv, int32_t position);
 
