@@ -9,6 +9,6 @@
 void logic_init(void);
 void logic_loop(void);
 
-int32_t clacAngle(uint8_t drv, int32_t positionTarget);
+int32_t clacAngle(uint8_t drv, float *angleIn);
 
 #endif /* LOGIC_H_ */
