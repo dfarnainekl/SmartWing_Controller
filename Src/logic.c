@@ -59,7 +59,8 @@ void logic_loop(void)
 		for(i=0; i<4; i++)
 		{
 			positionTarget[i] = (int32_t)pwm_in[i] - 1500;
-			positionTarget[i] = (int32_t)((float)positionTarget[i] * 16383 / 500.0 + 0.5); //2731.0 --> +-15°
+			//positionTarget[i] = (int32_t)((float)positionTarget[i] * 16383 / 500.0 + 0.5); //2731.0 --> +-15°
+			positionTarget[i] = clacAngle(i, positionTarget[i]);
 		}
 
 		for(i=0; i<4; i++) TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
@@ -159,4 +160,16 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 				break;
 		}
 	}
+}
+
+int32_t clacAngle(uint8_t drv, int32_t positionTarget)
+{
+	float alpha = 0;
+
+	alpha =  ( (float)positionTarget/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
+
+	if(drv == 1 || drv == 3)
+		alpha = 2.490378*alpha + 0.001711*alpha*alpha + 0.000138*alpha*alpha*alpha;
+
+	return (int32_t)( alpha * 2.0  / 360.0 * 65536.0);
 }
