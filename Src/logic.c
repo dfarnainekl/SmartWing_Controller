@@ -59,10 +59,10 @@ void logic_loop(void)
 			positionTarget[i] = (int32_t)pwm_in[i] - 1500;
 			if(positionTarget[i] < -500) positionTarget[i] = -500;
 			else if(positionTarget[i] > 500) positionTarget[i] = 500;
-			positionTarget[i] = (int32_t)((float)positionTarget[i] * 2731.0 / 500.0 + 0.5); //2731.0 --> +-15°
+			positionTarget[i] = (int32_t)((float)positionTarget[i] * 16383 / 500.0 + 0.5); //2731.0 --> +-15°
 		}
 
-		for(i=0; i<4; i++) TMC4671_highLevel_setPosition_nonBlocking(0, positionTarget[0]); //FIXME setting all channels doesnt work, SPI cs disable conflict?
+		for(i=0; i<4; i++) TMC4671_highLevel_setPosition_nonBlocking(0, positionTarget[0]); //FIXME setting all channels often doesnt work, SPI cs disable conflict?
 	}
 
 	if(systick_counter >= 20) //50Hz

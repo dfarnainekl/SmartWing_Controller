@@ -6,8 +6,8 @@
 #include "spi.h"
 
 
-#define DRV0_OFFSET_I0 			38756 	//FIXME offsets are changing!?
-#define DRV0_OFFSET_I1 			36109
+#define DRV0_OFFSET_I0 			38827 	//FIXME offsets are changing!?
+#define DRV0_OFFSET_I1 			36190
 #define DRV0_OFFSET_ENC_PHIM 	14528 	// negative encoder zero mechanical angle (signed 16bit)
 #define DRV0_OFFSET_ENC_PHIE 	-19488 	// negative encoder zero electrical angle (signed 16bit)
 
