@@ -29,7 +29,7 @@ int32_t tmc4671_readInt(uint8_t motor, uint8_t address)
 	HAL_SPI_TransmitReceive(swdriver[motor].SPI, txData, rxData, 5, HAL_MAX_DELAY);
 	swdriver_setCsnController(motor, true);
 
-	return (int)((rxData[3] << 24) | (rxData[2] << 16) | (rxData[1] << 8) | (rxData[0] << 0));
+	return (int)((rxData[1] << 24) | (rxData[2] << 16) | (rxData[3] << 8) | (rxData[4] << 0));
 }
 
 void tmc4671_writeInt(uint8_t motor, uint8_t address, int32_t value)
