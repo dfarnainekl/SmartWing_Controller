@@ -34,7 +34,11 @@ void logic_init(void)
 	//TMC4671_highLevel_torqueTest(0);
 	//TMC4671_highLevel_positionTest(3);
 
-	for(i=0; i<4; i++) TMC4671_highLevel_positionMode_fluxTorqueRamp(i);
+	for(i=0; i<4; i++)
+	{
+		TMC4671_highLevel_positionMode_fluxTorqueRamp(i);
+		HAL_Delay(500);
+	}
 
 	// pwm inputs //FIXME: timer interrupt priority lower than spi?
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
