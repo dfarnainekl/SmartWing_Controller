@@ -34,7 +34,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 	uint16_t angle_current = (as5147_getAngle(drv) << 5);  // current decoder angle
 	swdriver[drv].ofs_enc_phim += angle_current;
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) & 0xFFFF0000) | ((swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT) & 0x0000FFFF));
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, swdriver[drv].ofs_enc_phim); // set position to current position
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, (int32_t)swdriver[drv].ofs_enc_phim); // set position to current position
 
 	// Feedback selection
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 3); // phi_e_abn
@@ -101,7 +101,7 @@ void TMC4671_highLevel_positionMode(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
 }
 
-void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv)
+void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv) // TODO read actual position before torque ramp, ramp position from actual to 0 afterwards
 {
 	// Switch to position mode
 	uint16_t torque_flux_limit = 10000;//tmc4671_readInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS);

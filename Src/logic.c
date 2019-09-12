@@ -17,15 +17,9 @@ volatile bool pwm_updated = false;
 
 void logic_init(void)
 {
-	HAL_Delay(100);
-
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 
-	// pwm inputs
-	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
-	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
-	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
+	HAL_Delay(500);
 
 	uint8_t i;
 
@@ -33,12 +27,20 @@ void logic_init(void)
 	for(i=0; i<4; i++) swdriver_setEnable(i, true);
 	for(i=0; i<4; i++) TMC4671_highLevel_init(i);
 
+	HAL_Delay(10);
+
 	//TMC4671_highLevel_openLoopTest(3);
 	//TMC4671_highLevel_printOffsetAngle(0);
 	//TMC4671_highLevel_torqueTest(0);
 	//TMC4671_highLevel_positionTest(3);
 
 	for(i=0; i<4; i++) TMC4671_highLevel_positionMode_fluxTorqueRamp(i);
+
+	// pwm inputs //FIXME: timer interrupt priority lower than spi?
+	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
+	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
+	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 
 	//TMC4671_highLevel_pwmOff(3);
 }
@@ -57,12 +59,10 @@ void logic_loop(void)
 		for(i=0; i<4; i++)
 		{
 			positionTarget[i] = (int32_t)pwm_in[i] - 1500;
-			if(positionTarget[i] < -500) positionTarget[i] = -500;
-			else if(positionTarget[i] > 500) positionTarget[i] = 500;
 			positionTarget[i] = (int32_t)((float)positionTarget[i] * 16383 / 500.0 + 0.5); //2731.0 --> +-15°
 		}
 
-		for(i=0; i<4; i++) TMC4671_highLevel_setPosition_nonBlocking(0, positionTarget[0]); //FIXME setting all channels often doesnt work, SPI cs disable conflict?
+		for(i=0; i<4; i++) TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
 	}
 
 	if(systick_counter >= 20) //50Hz
@@ -117,19 +117,43 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 					timestamp_risingEdge[0] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1); //rising edge
 					pwm_updated = true;
 				}
-				else pwm_in[0] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1) - timestamp_risingEdge[0]; //falling edge
+				else
+				{
+					uint16_t pwm = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1) - timestamp_risingEdge[0]; //falling edge
+					if(pwm < 1000) pwm = 1000;
+					else if(pwm > 2000) pwm = 2000;
+					pwm_in[0] = pwm;
+				}
 				break;
 			case HAL_TIM_ACTIVE_CHANNEL_2:
 				if(HAL_GPIO_ReadPin(PWM_IN_1_GPIO_Port, PWM_IN_1_Pin)) timestamp_risingEdge[1] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2); //rising edge
-				else pwm_in[1] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2) - timestamp_risingEdge[1]; //falling edge
+				else
+				{
+					uint16_t pwm = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2) - timestamp_risingEdge[1]; //falling edge
+					if(pwm < 1000) pwm = 1000;
+					else if(pwm > 2000) pwm = 2000;
+					pwm_in[1] = pwm;
+				}
 				break;
 			case HAL_TIM_ACTIVE_CHANNEL_3:
 				if(HAL_GPIO_ReadPin(PWM_IN_2_GPIO_Port, PWM_IN_2_Pin)) timestamp_risingEdge[2] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3); //rising edge
-				else pwm_in[2] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3) - timestamp_risingEdge[2]; //falling edge
+				else
+				{
+					uint16_t pwm = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3) - timestamp_risingEdge[2]; //falling edge
+					if(pwm < 1000) pwm = 1000;
+					else if(pwm > 2000) pwm = 2000;
+					pwm_in[2] = pwm;
+				}
 				break;
 			case HAL_TIM_ACTIVE_CHANNEL_4:
 				if(HAL_GPIO_ReadPin(PWM_IN_3_GPIO_Port, PWM_IN_3_Pin)) timestamp_risingEdge[3] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4); //rising edge
-				else pwm_in[3] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4) - timestamp_risingEdge[3]; //falling edge
+				else
+				{
+					uint16_t pwm = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4) - timestamp_risingEdge[3]; //falling edge
+					if(pwm < 1000) pwm = 1000;
+					else if(pwm > 2000) pwm = 2000;
+					pwm_in[3] = pwm;
+				}
 				break;
 			default:
 				break;
