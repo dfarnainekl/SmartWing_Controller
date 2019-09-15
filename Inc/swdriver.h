@@ -10,22 +10,25 @@
 #define DRV0_OFFSET_I1 			33610	// 36109
 #define DRV0_OFFSET_ENC_PHIM 	14528 	// negative encoder zero mechanical angle (signed 16bit)
 #define DRV0_OFFSET_ENC_PHIE 	-19488 	// negative encoder zero electrical angle (signed 16bit)
+#define DRV0_OFFSET_POS0		51072
 
 #define DRV1_OFFSET_I0 			36531
 #define DRV1_OFFSET_I1 			32280
-#define DRV1_OFFSET_ENC_PHIM 	-5600	// negative encoder zero mechanical angle (signed 16bit)
-#define DRV1_OFFSET_ENC_PHIE 	-7584	// negative encoder zero electrical angle (signed 16bit)
+#define DRV1_OFFSET_ENC_PHIM 	25216	// negative encoder zero mechanical angle (signed 16bit)
+#define DRV1_OFFSET_ENC_PHIE 	-25696	// negative encoder zero electrical angle (signed 16bit)
+#define DRV1_OFFSET_POS0		51072
 
 #define DRV2_OFFSET_I0 			38756
 #define DRV2_OFFSET_I1 			36109
 #define DRV2_OFFSET_ENC_PHIM 	0 		// negative encoder zero mechanical angle (signed 16bit)
 #define DRV2_OFFSET_ENC_PHIE 	0 		// negative encoder zero electrical angle (signed 16bit)
+#define DRV2_OFFSET_POS0		51072
 
 #define DRV3_OFFSET_I0			36531
 #define DRV3_OFFSET_I1			32280
 #define DRV3_OFFSET_ENC_PHIM 	0 		// negative encoder zero mechanical angle (signed 16bit)
 #define DRV3_OFFSET_ENC_PHIE 	0 		// negative encoder zero electrical angle (signed 16bit)
-
+#define DRV3_OFFSET_POS0		51072
 
 #define DRV0_OFFSET_PHIM_PHIE ((int16_t)((-7)*((int32_t)DRV0_OFFSET_ENC_PHIE + (int32_t)DRV0_OFFSET_ENC_PHIM)))
 #define DRV1_OFFSET_PHIM_PHIE ((int16_t)((-7)*((int32_t)DRV0_OFFSET_ENC_PHIE + (int32_t)DRV0_OFFSET_ENC_PHIM)))
@@ -52,6 +55,7 @@ typedef struct swdriver_s
 	uint16_t ofs_i1;
 	int16_t ofs_enc_phim;
 	int16_t ofs_phim_phie;
+	int16_t ofs_pos0;
 } swdriver_t;
 
 
