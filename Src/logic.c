@@ -64,7 +64,8 @@ void logic_loop(void)
 {
 	static int32_t positionTarget[4] = {0, 0, 0, 0};
 	static float angleIn[4] = {0, 0, 0, 0};
-	uint8_t i;
+	static uint8_t i;
+ 	static uint16_t count = 0;
 
 	if(pwm_updated)
 	{
@@ -94,13 +95,13 @@ void logic_loop(void)
 		systick_counter_2 = 0;
 
 		static char string[128];
-		uint16_t angle = as5147_getAngle(0);
+		//uint16_t angle = as5147_getAngle(0);
 //		uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (11bit) %d (16bit)\n\r", 1, angle, ((uint16_t)angle << 5));
-		uint16_t len = snprintf(string, 128, "pwm_in: %d %d %d %d\r\n", pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
+		uint16_t len = snprintf(string, 128, "pwm_in[%d]: %d %d %d %d\r\n", count++, pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
 //		uint16_t len = snprintf(string, 128, "%d\n", pwm_in[3]);
 //			uint16_t len = snprintf(string, 128, "(uint16_t)%d\t(int16_t)%d\t%d\t%d\t%d\n\r", ((uint16_t)angle << 5),(int16_t)(angle << 5), DRV0_OFFSET_ENC_PHIM, DRV0_OFFSET_ENC_PHIE, DRV0_OFFSET_PHIM_PHIE);
 //		uint16_t len = snprintf(string, 128, "%d\n\r", tmc6200_readInt(1, 0x01));
-		 // HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+		  HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	}
 }
 
@@ -146,7 +147,11 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 				}
 				break;
 			case HAL_TIM_ACTIVE_CHANNEL_2:
-				if(HAL_GPIO_ReadPin(PWM_IN_1_GPIO_Port, PWM_IN_1_Pin)) timestamp_risingEdge[1] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2); //rising edge
+				if(HAL_GPIO_ReadPin(PWM_IN_1_GPIO_Port, PWM_IN_1_Pin))
+				{
+					timestamp_risingEdge[1] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2); //rising edge
+					pwm_updated = true;
+				}
 				else
 				{
 					uint16_t pwm = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2) - timestamp_risingEdge[1]; //falling edge
@@ -156,7 +161,11 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 				}
 				break;
 			case HAL_TIM_ACTIVE_CHANNEL_3:
-				if(HAL_GPIO_ReadPin(PWM_IN_2_GPIO_Port, PWM_IN_2_Pin)) timestamp_risingEdge[2] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3); //rising edge
+				if(HAL_GPIO_ReadPin(PWM_IN_2_GPIO_Port, PWM_IN_2_Pin))
+				{
+					timestamp_risingEdge[2] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3); //rising edge
+					pwm_updated = true;
+				}
 				else
 				{
 					uint16_t pwm = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_3) - timestamp_risingEdge[2]; //falling edge
@@ -166,7 +175,11 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 				}
 				break;
 			case HAL_TIM_ACTIVE_CHANNEL_4:
-				if(HAL_GPIO_ReadPin(PWM_IN_3_GPIO_Port, PWM_IN_3_Pin)) timestamp_risingEdge[3] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4); //rising edge
+				if(HAL_GPIO_ReadPin(PWM_IN_3_GPIO_Port, PWM_IN_3_Pin))
+				{
+					timestamp_risingEdge[3] = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4); //rising edge
+					pwm_updated = true;
+				}
 				else
 				{
 					uint16_t pwm = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_4) - timestamp_risingEdge[3]; //falling edge
