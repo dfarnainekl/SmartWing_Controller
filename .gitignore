@@ -60,3 +60,4 @@ Debug/
 
 # Build with Makefile
 /build
+stlink_settings.json

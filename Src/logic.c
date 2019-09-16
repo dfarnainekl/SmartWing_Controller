@@ -31,13 +31,19 @@ void logic_init(void)
 	for(i=0; i<4; i++) TMC4671_highLevel_init(i);
 	HAL_Delay(10);
 
-	//TMC4671_highLevel_openLoopTest(3);
-	//TMC4671_highLevel_printOffsetAngle(1);
-	//TMC4671_highLevel_torqueTest(0);
-	//TMC4671_highLevel_positionTest(3);
+	//TMC4671_highLevel_printOffsetAngle(0);
+	//TMC4671_highLevel_stoppedMode(0);
+
+	//TMC4671_highLevel_printOffsetAngle(0);
+	// TMC4671_highLevel_openLoopTest2(0);
+	// HAL_Delay(5000);
+	// TMC4671_highLevel_stoppedMode(0);
+
 
 	TMC4671_highLevel_initEncoder_new(0);
 	//TMC4671_highLevel_openLoopTest2(0);
+	//HAL_Delay(5000);
+	//TMC4671_highLevel_stoppedMode(0);
 	TMC4671_highLevel_positionMode(0);
 
 
@@ -87,14 +93,14 @@ void logic_loop(void)
 	{
 		systick_counter_2 = 0;
 
-//		static char string[128];
-//		uint16_t angle = as5147_getAngle(0);
+		static char string[128];
+		uint16_t angle = as5147_getAngle(0);
 //		uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (11bit) %d (16bit)\n\r", 1, angle, ((uint16_t)angle << 5));
-//		uint16_t len = snprintf(string, 128, "pwm_in: %d %d %d %d\r\n", pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
+		uint16_t len = snprintf(string, 128, "pwm_in: %d %d %d %d\r\n", pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
 //		uint16_t len = snprintf(string, 128, "%d\n", pwm_in[3]);
-//		uint16_t len = snprintf(string, 128, "%d %d %d\n", DRV0_OFFSET_ENC_PHIM, DRV0_OFFSET_ENC_PHIE, DRV0_OFFSET_PHIM_PHIE);
+//			uint16_t len = snprintf(string, 128, "(uint16_t)%d\t(int16_t)%d\t%d\t%d\t%d\n\r", ((uint16_t)angle << 5),(int16_t)(angle << 5), DRV0_OFFSET_ENC_PHIM, DRV0_OFFSET_ENC_PHIE, DRV0_OFFSET_PHIM_PHIE);
 //		uint16_t len = snprintf(string, 128, "%d\n\r", tmc6200_readInt(1, 0x01));
-//		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+		 // HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	}
 }
 
