@@ -31,10 +31,12 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0); // standard polarity and count direction, don't clear at n pulse
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PPR, 2048); // decoder pulses per revolution
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // decoder angle 0 FIXME: writing anything else doesn't work but writing current angle would allow for more elegant solution. 3 lines below could be deleted, see git history
-	uint16_t angle_current = (as5147_getAngle(drv) << 5);  // current decoder angle
-	swdriver[drv].ofs_enc_phim += angle_current;
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) & 0xFFFF0000) | ((swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT) & 0x0000FFFF));
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, (int32_t)swdriver[drv].ofs_enc_phim); // set position to current position
+	//uint16_t angle_current = (as5147_getAngle(drv) << 5);  // current decoder angle
+	//swdriver[drv].ofs_enc_phim += angle_current;
+	//tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) & 0xFFFF0000) | ((swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT) & 0x0000FFFF));
+	//tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, (int32_t)swdriver[drv].ofs_enc_phim); // set position to current position
+	//tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((0 << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) & 0xFFFF0000) | ((0 << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT) & 0x0000FFFF));
+	//tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, (int32_t)0); // set position to current position
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, 0);
 
 	// Feedback selection
@@ -167,17 +169,18 @@ void TMC4671_highLevel_initEncoder_new(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, 0);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 1);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_EXT, 0);
-	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, 2000);
+	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2000 << TMC4671_UD_EXT_SHIFT));
 	HAL_Delay(1000);
+	uint16_t angle = as5147_getAngle(drv);
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0);
 
-	uint16_t angle = as5147_getAngle(drv);
-	int32_t position =  (int32_t)( (int16_t)(((uint16_t)angle<<5) - swdriver[drv].ofs_pos0)  );
-//	static char string[128];
-//	uint16_t len = snprintf(string, 128, "-->driver %d encoder angle: %d (11bit) %d (16bit) %ld\n\r", drv, angle, ((int16_t)angle << 5), position );
-//	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+
+	int32_t position =  (int32_t)( (int16_t)( (angle<<5) - swdriver[drv].ofs_pos0)  );
+	// static char string[128];
+	// uint16_t len = snprintf(string, 128, "-->driver %d encoder angle: %d (11bit) %d (16bit) %ld\n\r", drv, angle, (angle << 5), position );
+	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 3); // phi_e_abn
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, position );
 }

@@ -7,7 +7,7 @@ static void spiMode_set(uint8_t drv)
 {
 	swdriver[drv].SPI->Init.CLKPolarity = SPI_POLARITY_LOW;
 	swdriver[drv].SPI->Init.CLKPhase = SPI_PHASE_2EDGE;
-	if (HAL_SPI_Init(&hspi1) != HAL_OK)
+	if (HAL_SPI_Init(swdriver[drv].SPI) != HAL_OK)
 	{
 		_Error_Handler(__FILE__, __LINE__);
 	}
@@ -18,7 +18,7 @@ static void spiMode_reset(uint8_t drv)
 {
 	swdriver[drv].SPI->Init.CLKPolarity = SPI_POLARITY_HIGH;
 	swdriver[drv].SPI->Init.CLKPhase = SPI_PHASE_2EDGE;
-	if (HAL_SPI_Init(&hspi1) != HAL_OK)
+	if (HAL_SPI_Init(swdriver[drv].SPI) != HAL_OK)
 	{
 		_Error_Handler(__FILE__, __LINE__);
 	}

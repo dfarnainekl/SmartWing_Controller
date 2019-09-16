@@ -75,7 +75,7 @@ Src/tmc6200/TMC6200.c \
 Src/tmc6200/TMC6200_highLevel.c \
 Src/tmc4671/TMC4671.c \
 Src/tmc4671/TMC4671_highLevel.c \
-Src/swdriver.c 
+Src/swdriver.c
 
 # ASM sources
 ASM_SOURCES =  \
@@ -165,7 +165,7 @@ LDSCRIPT = STM32H743VITx_FLASH.ld
 # libraries
 LIBS = -lc -lm -lnosys
 LIBDIR =
-LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
+LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -u_printf_float
 
 # default action: build all
 all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin

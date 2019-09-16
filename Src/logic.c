@@ -32,20 +32,23 @@ void logic_init(void)
 	HAL_Delay(10);
 
 	//TMC4671_highLevel_printOffsetAngle(0);
-	//TMC4671_highLevel_stoppedMode(0);
-
-	//TMC4671_highLevel_printOffsetAngle(0);
 	// TMC4671_highLevel_openLoopTest2(0);
 	// HAL_Delay(5000);
 	// TMC4671_highLevel_stoppedMode(0);
 
-
 	TMC4671_highLevel_initEncoder_new(0);
 	//TMC4671_highLevel_openLoopTest2(0);
-	//HAL_Delay(5000);
-	//TMC4671_highLevel_stoppedMode(0);
-	TMC4671_highLevel_positionMode(0);
+	TMC4671_highLevel_positionMode2(0);
+	// HAL_Delay(5000);
+	// TMC4671_highLevel_stoppedMode(0);
 
+	HAL_Delay(500);
+
+	TMC4671_highLevel_initEncoder_new(1);
+	// TMC4671_highLevel_openLoopTest2(1);
+	TMC4671_highLevel_positionMode2(1);
+	// HAL_Delay(5000);
+	// TMC4671_highLevel_stoppedMode(1);
 
 
 	// pwm inputs //FIXME: timer interrupt priority lower than spi?
@@ -54,9 +57,10 @@ void logic_init(void)
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 
-	//TMC4671_highLevel_pwmOff(3);
+
+	// TMC4671_highLevel_pwmOff(3);
 	// for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
-	//for(i=0; i<4; i++)  TMC4671_highLevel_positionMode(i);
+	// for(i=0; i<4; i++)  TMC4671_highLevel_positionMode2(i);
 }
 
 
@@ -93,15 +97,23 @@ void logic_loop(void)
 	if(systick_counter_2 >= 200) //5Hz
 	{
 		systick_counter_2 = 0;
-
+		// -------------------------------------------------------------------------
 		static char string[128];
-		//uint16_t angle = as5147_getAngle(0);
-//		uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (11bit) %d (16bit)\n\r", 1, angle, ((uint16_t)angle << 5));
-		uint16_t len = snprintf(string, 128, "pwm_in[%d]: %d %d %d %d\r\n", count++, pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
-//		uint16_t len = snprintf(string, 128, "%d\n", pwm_in[3]);
-//			uint16_t len = snprintf(string, 128, "(uint16_t)%d\t(int16_t)%d\t%d\t%d\t%d\n\r", ((uint16_t)angle << 5),(int16_t)(angle << 5), DRV0_OFFSET_ENC_PHIM, DRV0_OFFSET_ENC_PHIE, DRV0_OFFSET_PHIM_PHIE);
-//		uint16_t len = snprintf(string, 128, "%d\n\r", tmc6200_readInt(1, 0x01));
-		  HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+		// -------------------------------------------------------------------------
+		// uint16_t angle0 = as5147_getAngle(0);
+		// uint16_t angle1 = as5147_getAngle(1);
+		// uint16_t len = snprintf(string, 128, "dr %d: enc11= %d enc16=%d\tdr %d: enc11= %d enc16=%d\n\r", 0, angle0, (angle0 << 5), 1, angle1, (angle1 << 5));
+		// -------------------------------------------------------------------------
+		// uint16_t angle0 = as5147_getAngle(0);
+		//uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (11bit) %d (16bit)\n\r", 0, angle0, ((uint16_t)angle0 << 5));
+		// -------------------------------------------------------------------------
+		uint16_t len = snprintf(string, 128, "pwm_in[%.1f]: %d %d %d %d\r\n", (float)(1.0/5.0*(float)(count++)), pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
+		// -------------------------------------------------------------------------
+		// uint16_t len = snprintf(string, 128, "(uint16_t)%d\t(int16_t)%d\t%d\t%d\t%d\n\r", ((uint16_t)angle << 5),(int16_t)(angle << 5), DRV0_OFFSET_ENC_PHIM, DRV0_OFFSET_ENC_PHIE, DRV0_OFFSET_PHIM_PHIE);
+		// -------------------------------------------------------------------------
+		// uint16_t len = snprintf(string, 128, "%d\n\r", tmc6200_readInt(1, 0x01));
+		// -------------------------------------------------------------------------
+		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	}
 }
 
@@ -113,7 +125,7 @@ void HAL_SYSTICK_Callback(void)
 
 	// error led
 	if(swdriver_getStatus(0) || swdriver_getStatus(1) || swdriver_getStatus(2) || swdriver_getStatus(3) ||
-	   swdriver_getFault(0) || swdriver_getFault(1) || swdriver_getFault(2) || swdriver_getFault(3))
+	   swdriver_getFault(0)  || swdriver_getFault(1)  || swdriver_getFault(2)  || swdriver_getFault(3)  )
 	{
 		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 	}
