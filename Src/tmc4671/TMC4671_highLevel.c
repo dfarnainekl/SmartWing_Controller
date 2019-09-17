@@ -60,7 +60,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (120 << TMC4671_PID_FLUX_P_SHIFT) | (3000 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (120 << TMC4671_PID_TORQUE_P_SHIFT) | (3000 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (7000 << TMC4671_PID_VELOCITY_P_SHIFT) | (500 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (35 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
 
 	// Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
@@ -272,19 +272,13 @@ void TMC4671_highLevel_openLoopTest2(uint8_t drv) // to verify correct encoder i
 void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv) // TODO read actual position before torque ramp, ramp position from actual to 0 afterwards
 {
 	uint16_t torque_flux_limit = 5000;
+	uint16_t torque_flux = 0;
 	uint8_t i;
 
 	torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
 
-	// static char string[50];
-	// uint16_t len = snprintf(string, 50, "drive %d torque_flux_limit: %d\n\r", drv, torque_flux_limit );
-	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
-
-
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 0);
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
-
-	uint16_t torque_flux = 0;
 
 	for(i=0; i<100; i++)
 	{
@@ -292,6 +286,7 @@ void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv) // TODO read act
 		tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux);
 		HAL_Delay(1);
 	}
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux_limit);
 }
 
 void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv)
@@ -313,9 +308,6 @@ void TMC4671_highLevel_togglePositionFilter(uint8_t drv)
 {
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
 	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
-	static char string[20];
-	uint16_t len = snprintf(string, 20, "filter = %d\t%d\r\n", enabled, !enabled);
-	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, !enabled);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0);
 }
@@ -323,4 +315,17 @@ void TMC4671_highLevel_togglePositionFilter(uint8_t drv)
 void TMC4671_highLevel_setCurrentLimit(uint8_t drv, uint16_t torque_flux_limit)
 {
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux_limit);
+}
+
+char* TMC4671_highLevel_getStatus(uint8_t drv)
+{
+	static char string[50];
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
+	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
+	uint16_t torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
+	snprintf(string, 50, "Position-Filter: %s\r\n"
+											 "Torque-Limit:    %d\r\n",
+											  enabled?"on":"off", torque_flux_limit);
+
+	return string;
 }

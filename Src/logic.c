@@ -38,19 +38,17 @@ void logic_init(void)
 	for(i=0; i<4; i++) TMC4671_highLevel_init(i);
 	HAL_Delay(10);
 
-	//TMC4671_highLevel_openLoopTest2(0);
-	//TMC4671_highLevel_positionMode2(0);
 
 	HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
 	rx_byte_new = 0;
 	// TODO: wait for button press to set zero positions
-	while(1)
+	while( !(rx_byte_new && rx_byte == 's') )
 	{
-			if(rx_byte_new &&rx_byte == 's')
-			{
-				rx_byte_new=0;
-				break;
-			}
+			// if(rx_byte_new && rx_byte == 's')
+			// {
+			// 	rx_byte_new=0;
+			// 	break;
+			// }
 
 			angle[0] = as5147_getAngle(0);
 			angle[1] = as5147_getAngle(1);
@@ -145,7 +143,7 @@ void logic_loop(void)
 	{
 		systick_counter_2 = 0;
 		// -------------------------------------------------------------------------
-		static char string[128];
+		static char string[200];
 		// -------------------------------------------------------------------------
 		// uint16_t angle0 = as5147_getAngle(0);
 		// uint16_t angle1 = as5147_getAngle(1);
@@ -154,11 +152,11 @@ void logic_loop(void)
 		// uint16_t angle0 = as5147_getAngle(0);
 		//uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (11bit) %d (16bit)\n\r", 0, angle0, ((uint16_t)angle0 << 5));
 		// -------------------------------------------------------------------------
-		uint16_t len = snprintf(string, 128,
-			"%s"
+		uint16_t len = snprintf(string, 200,
+			"%s%s"
 			"pwm_in:     %d %d %d %d\r\n"
 			"angleIn:    % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
-			"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r\n\r", clear_string,
+			"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r\n\r", clear_string, TMC4671_highLevel_getStatus(0),
 			pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3], angleIn[0], angleIn[1], angleIn[2], angleIn[3],
 			angleOut[0], angleOut[1], angleOut[2], angleOut[3]);
 		// -------------------------------------------------------------------------
