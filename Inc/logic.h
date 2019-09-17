@@ -4,7 +4,7 @@
 #include "stm32h7xx_hal.h"
 
 
-#define ANGLE_MAX_ALPHA_DEGREE 	15.0
+#define ANGLE_MAX_ALPHA_DEGREE 	20.0
 
 void logic_init(void);
 void logic_loop(void);

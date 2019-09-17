@@ -41,9 +41,9 @@
 	(write(motor, address, FIELD_SET(read(motor, address), mask, shift, value)))
 
 // Macro to surpress unused parameter warnings
-#ifndef UNUSED
-	#define UNUSED(x) (void)(x)
-#endif
+// #ifndef UNUSED
+// 	#define UNUSED(x) (void)(x)
+// #endif
 
 // Memory access helpers
 // Force the compiler to access a location exactly once

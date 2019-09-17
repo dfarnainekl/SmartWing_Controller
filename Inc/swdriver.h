@@ -6,17 +6,17 @@
 #include "spi.h"
 
 
-#define DRV0_OFFSET_I0 				34715 	// 38756FIXME offsets are changing!?
-#define DRV0_OFFSET_I1 				33610	// 36109
+#define DRV0_OFFSET_I0 				32767 	// 38756FIXME offsets are changing!?
+#define DRV0_OFFSET_I1 				33570	// 36109
 #define DRV0_OFFSET_ENC_PHIM 	-14496 	// negative encoder zero mechanical angle (signed 16bit)
 #define DRV0_OFFSET_ENC_PHIE 	-19584 	// negative encoder zero electrical angle (signed 16bit)
-#define DRV0_OFFSET_POS0			60768
+#define DRV0_OFFSET_POS0			27200
 
 #define DRV1_OFFSET_I0 			34677
 #define DRV1_OFFSET_I1 			33589
 #define DRV1_OFFSET_ENC_PHIM 	25216	// negative encoder zero mechanical angle (signed 16bit)
 #define DRV1_OFFSET_ENC_PHIE 	-25696	// negative encoder zero electrical angle (signed 16bit)
-#define DRV1_OFFSET_POS0		44096
+#define DRV1_OFFSET_POS0		47872
 
 #define DRV2_OFFSET_I0 			38756
 #define DRV2_OFFSET_I1 			36109
@@ -55,7 +55,7 @@ typedef struct swdriver_s
 	uint16_t ofs_i1;
 	int16_t ofs_enc_phim;
 	int16_t ofs_phim_phie;
-	int16_t ofs_pos0;
+	uint16_t ofs_pos0;
 } swdriver_t;
 
 

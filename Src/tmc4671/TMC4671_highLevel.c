@@ -97,7 +97,6 @@ void TMC4671_highLevel_init(uint8_t drv)
 void TMC4671_highLevel_pwmOff(uint8_t drv)
 {
 	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000000); // PWM off
-
 }
 
 void TMC4671_highLevel_stoppedMode(uint8_t drv)
@@ -109,14 +108,13 @@ void TMC4671_highLevel_stoppedMode(uint8_t drv)
 void TMC4671_highLevel_positionMode(uint8_t drv)
 {
 	// Switch to position mode
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // position target 0
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // target position 0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
 }
 
 void TMC4671_highLevel_positionMode2(uint8_t drv)
 {
-	// Switch to position mode
-	//tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // position target 0
+	// Switch to position mode without setting target position to 0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
 }
 
@@ -143,9 +141,8 @@ void TMC4671_highLevel_printOffsetAngle(uint8_t drv)
 	HAL_Delay(1000);
 
 	char string[64];
-	uint16_t angle = as5147_getAngle(drv);
+	uint16_t angle = as5147_getAngle(drv); // will be printed as int16!!!
 	uint16_t len = snprintf(string, 64, "\n\rdriver %d encoder zero angle: %d (11bit) %d (16bit)\n\r", drv, angle, (int16_t)(angle << 5));
-	//uint16_t len = snprintf(string, 64, "\n\rdriver %d encoder zero angle: %d (11bit) %d (16bit)\n\r", drv, angle, (uint16_t)(angle << 5));
 	HAL_UART_Transmit(&huart3, (uint8_t*)string, len, 100000000);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
 }
@@ -169,13 +166,12 @@ void TMC4671_highLevel_initEncoder_new(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, 0);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 1);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_EXT, 0);
-	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2000 << TMC4671_UD_EXT_SHIFT));
-	HAL_Delay(1000);
+	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2500 << TMC4671_UD_EXT_SHIFT));
+	HAL_Delay(2000);
 	uint16_t angle = as5147_getAngle(drv);
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0);
-
 
 	int32_t position =  (int32_t)( (int16_t)( (angle<<5) - swdriver[drv].ofs_pos0)  );
 	// static char string[128];
@@ -268,32 +264,63 @@ void TMC4671_highLevel_openLoopTest2(uint8_t drv) // to verify correct encoder i
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 2); // phi_e_openloop
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (1500 << TMC4671_UD_EXT_SHIFT)); // uq=0, ud=1500
 
-	// ===== Open loop test drive =====
-
 	// Switch to open loop velocity mode
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 8); // uq_ud_ext
-
-	// Rotate right
-	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 1); // velocity target 1
-//	HAL_Delay(20000);
+	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 1); // rotate right, velocity target 1
 }
 
 void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv) // TODO read actual position before torque ramp, ramp position from actual to 0 afterwards
 {
-	// Switch to position mode
-	uint16_t torque_flux_limit = 10000;//tmc4671_readInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS);
+	uint16_t torque_flux_limit = 5000;
+	uint8_t i;
+
+	torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
+
+	// static char string[50];
+	// uint16_t len = snprintf(string, 50, "drive %d torque_flux_limit: %d\n\r", drv, torque_flux_limit );
+	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+
 
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 0);
-
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // position target 0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
 
 	uint16_t torque_flux = 0;
-	while(torque_flux < torque_flux_limit)
+
+	for(i=0; i<100; i++)
 	{
-		torque_flux += 100;
-		if(torque_flux > torque_flux_limit) torque_flux = torque_flux_limit;
+		torque_flux = (uint16_t)( (float)i/100.0*(float)torque_flux_limit );
 		tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux);
 		HAL_Delay(1);
 	}
+}
+
+void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv)
+{
+	uint8_t i;
+	int32_t position = tmc4671_readInt(drv, TMC4671_PID_POSITION_ACTUAL);
+
+
+	for(i=100; i> 0; i--)
+	{
+		//TMC4671_highLevel_setPosition(drv, position);
+		tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, (int32_t)((float)position*(float)i/100.0) );
+		HAL_Delay(10);
+	}
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0);
+}
+
+void TMC4671_highLevel_togglePositionFilter(uint8_t drv)
+{
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
+	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
+	static char string[20];
+	uint16_t len = snprintf(string, 20, "filter = %d\t%d\r\n", enabled, !enabled);
+	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, !enabled);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0);
+}
+
+void TMC4671_highLevel_setCurrentLimit(uint8_t drv, uint16_t torque_flux_limit)
+{
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux_limit);
 }
