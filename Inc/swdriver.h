@@ -6,29 +6,29 @@
 #include "spi.h"
 
 
-#define DRV0_OFFSET_I0 				32767 	// 38756FIXME offsets are changing!?
-#define DRV0_OFFSET_I1 				33570	// 36109
-#define DRV0_OFFSET_ENC_PHIM 	-14496 	// negative encoder zero mechanical angle (signed 16bit)
-#define DRV0_OFFSET_ENC_PHIE 	-19584 	// negative encoder zero electrical angle (signed 16bit)
+#define DRV0_OFFSET_I0 				38907 	// FIXME offsets are changing!?
+#define DRV0_OFFSET_I1 				36184
+#define DRV0_OFFSET_ENC_PHIM 	0 			// negative encoder zero mechanical angle (signed 16bit)
+#define DRV0_OFFSET_ENC_PHIE 	0 			// negative encoder zero electrical angle (signed 16bit)
 #define DRV0_OFFSET_POS0			27200
 
-#define DRV1_OFFSET_I0 			34677
-#define DRV1_OFFSET_I1 			33589
-#define DRV1_OFFSET_ENC_PHIM 	25216	// negative encoder zero mechanical angle (signed 16bit)
-#define DRV1_OFFSET_ENC_PHIE 	-25696	// negative encoder zero electrical angle (signed 16bit)
-#define DRV1_OFFSET_POS0		47872
+#define DRV1_OFFSET_I0 				34341
+#define DRV1_OFFSET_I1 				33194
+#define DRV1_OFFSET_ENC_PHIM 	0				// negative encoder zero mechanical angle (signed 16bit)
+#define DRV1_OFFSET_ENC_PHIE 	0				// negative encoder zero electrical angle (signed 16bit)
+#define DRV1_OFFSET_POS0			47872
 
-#define DRV2_OFFSET_I0 			38756
-#define DRV2_OFFSET_I1 			36109
-#define DRV2_OFFSET_ENC_PHIM 	0 		// negative encoder zero mechanical angle (signed 16bit)
-#define DRV2_OFFSET_ENC_PHIE 	0 		// negative encoder zero electrical angle (signed 16bit)
-#define DRV2_OFFSET_POS0		0
+#define DRV2_OFFSET_I0 				33170
+#define DRV2_OFFSET_I1 				36109
+#define DRV2_OFFSET_ENC_PHIM 	0 			// negative encoder zero mechanical angle (signed 16bit)
+#define DRV2_OFFSET_ENC_PHIE 	0 			// negative encoder zero electrical angle (signed 16bit)
+#define DRV2_OFFSET_POS0			50000
 
-#define DRV3_OFFSET_I0			36531
-#define DRV3_OFFSET_I1			32280
-#define DRV3_OFFSET_ENC_PHIM 	0 		// negative encoder zero mechanical angle (signed 16bit)
-#define DRV3_OFFSET_ENC_PHIE 	0 		// negative encoder zero electrical angle (signed 16bit)
-#define DRV3_OFFSET_POS0		0
+#define DRV3_OFFSET_I0				36177
+#define DRV3_OFFSET_I1				31932
+#define DRV3_OFFSET_ENC_PHIM 	0 			// negative encoder zero mechanical angle (signed 16bit)
+#define DRV3_OFFSET_ENC_PHIE 	0 			// negative encoder zero electrical angle (signed 16bit)
+#define DRV3_OFFSET_POS0			10000
 
 #define DRV0_OFFSET_PHIM_PHIE ((int16_t)((-7)*((int32_t)DRV0_OFFSET_ENC_PHIE - (int32_t)DRV0_OFFSET_ENC_PHIM)))
 #define DRV1_OFFSET_PHIM_PHIE ((int16_t)((-7)*((int32_t)DRV1_OFFSET_ENC_PHIE - (int32_t)DRV1_OFFSET_ENC_PHIM)))

@@ -24,7 +24,7 @@ void logic_init(void)
 {
 	uint8_t i;
 	uint16_t angle[4];
-	static char string[50];
+	static char string[100];
 
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 	HAL_Delay(500);
@@ -44,31 +44,35 @@ void logic_init(void)
 	// TODO: wait for button press to set zero positions
 	while( !(rx_byte_new && rx_byte == 's') )
 	{
-			// if(rx_byte_new && rx_byte == 's')
-			// {
-			// 	rx_byte_new=0;
-			// 	break;
-			// }
-
-			angle[0] = as5147_getAngle(0);
-			angle[1] = as5147_getAngle(1);
-			uint16_t len = snprintf(string, 50, "enc0: %d\tenc1: %d\n\r", (angle[0] << 5), (angle[1] << 5));
+			for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
+			uint16_t len = snprintf(string, 100, "%senc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n\r", clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
 			HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 			HAL_Delay(200);
 	} //TODO: do-while()
 	rx_byte_new = 0;
 
-	TMC4671_highLevel_initEncoder_new(0);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
-	TMC4671_highLevel_positionMode_rampToZero(0);
-	TMC4671_highLevel_stoppedMode(0);
-	HAL_Delay(100);
-	TMC4671_highLevel_initEncoder_new(1);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
-	TMC4671_highLevel_positionMode_rampToZero(1);
+	// TMC4671_highLevel_initEncoder_new(0);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
+	// TMC4671_highLevel_positionMode_rampToZero(0);
+	// TMC4671_highLevel_stoppedMode(0);
+	// HAL_Delay(100);
+	// TMC4671_highLevel_initEncoder_new(1);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
+	// TMC4671_highLevel_positionMode_rampToZero(1);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
+	// TMC4671_highLevel_positionMode_rampToZero(0);
+	// HAL_Delay(1000);
 
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
-	TMC4671_highLevel_positionMode_rampToZero(0);
+	TMC4671_highLevel_initEncoder_new(2);
+	TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
+	TMC4671_highLevel_positionMode_rampToZero(2);
+	TMC4671_highLevel_stoppedMode(2);
+	HAL_Delay(100);
+	TMC4671_highLevel_initEncoder_new(3);
+	TMC4671_highLevel_positionMode_fluxTorqueRamp(3);
+	TMC4671_highLevel_positionMode_rampToZero(3);
+	TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
+	TMC4671_highLevel_positionMode_rampToZero(2);
 
 
 	//HAL_Delay(1000);
@@ -143,7 +147,7 @@ void logic_loop(void)
 	{
 		systick_counter_2 = 0;
 		// -------------------------------------------------------------------------
-		static char string[200];
+		static char string[1000];
 		// -------------------------------------------------------------------------
 		// uint16_t angle0 = as5147_getAngle(0);
 		// uint16_t angle1 = as5147_getAngle(1);
@@ -152,11 +156,12 @@ void logic_loop(void)
 		// uint16_t angle0 = as5147_getAngle(0);
 		//uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (11bit) %d (16bit)\n\r", 0, angle0, ((uint16_t)angle0 << 5));
 		// -------------------------------------------------------------------------
-		uint16_t len = snprintf(string, 200,
-			"%s%s"
+		uint16_t len = snprintf(string, 1000,
+			"%s%s%s%s%s"
 			"pwm_in:     %d %d %d %d\r\n"
 			"angleIn:    % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
-			"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r\n\r", clear_string, TMC4671_highLevel_getStatus(0),
+			"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r\n\r", clear_string,
+			TMC4671_highLevel_getStatus(0), TMC4671_highLevel_getStatus(1), TMC4671_highLevel_getStatus(2), TMC4671_highLevel_getStatus(3),
 			pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3], angleIn[0], angleIn[1], angleIn[2], angleIn[3],
 			angleOut[0], angleOut[1], angleOut[2], angleOut[3]);
 		// -------------------------------------------------------------------------

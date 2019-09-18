@@ -60,7 +60,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (120 << TMC4671_PID_FLUX_P_SHIFT) | (3000 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (120 << TMC4671_PID_TORQUE_P_SHIFT) | (3000 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (7000 << TMC4671_PID_VELOCITY_P_SHIFT) | (500 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (35 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
 
 	// Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
@@ -319,13 +319,16 @@ void TMC4671_highLevel_setCurrentLimit(uint8_t drv, uint16_t torque_flux_limit)
 
 char* TMC4671_highLevel_getStatus(uint8_t drv)
 {
-	static char string[50];
+	static char string[4][100];
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
 	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
 	uint16_t torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
-	snprintf(string, 50, "Position-Filter: %s\r\n"
-											 "Torque-Limit:    %d\r\n",
-											  enabled?"on":"off", torque_flux_limit);
+	snprintf(&string[drv][0], 100,
+		"Drive %d\n\r"
+		"Position-Filter: %s\r\n"
+		"Torque-Limit:    %d\r\n"
+		"---------------------------\n\r",
+			drv, enabled?"on":"off", torque_flux_limit);
 
-	return string;
+	return &string[drv][0];
 }
