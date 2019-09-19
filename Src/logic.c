@@ -25,6 +25,7 @@ void logic_init(void)
 	uint8_t i;
 	uint16_t angle[4];
 	static char string[100];
+	static bool button_init=true;
 
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 	HAL_Delay(500);
@@ -42,8 +43,9 @@ void logic_init(void)
 	HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
 	rx_byte_new = 0;
 	// TODO: wait for button press to set zero positions
-	while( !(rx_byte_new && rx_byte == 's') )
+	while( !(rx_byte_new && rx_byte == 's') && button_init == true)
 	{
+			button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
 			for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
 			uint16_t len = snprintf(string, 100, "%senc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n\r", clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
 			HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
@@ -51,17 +53,18 @@ void logic_init(void)
 	} //TODO: do-while()
 	rx_byte_new = 0;
 
-	// TMC4671_highLevel_initEncoder_new(0);
-	// TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
-	// TMC4671_highLevel_positionMode_rampToZero(0);
-	// TMC4671_highLevel_stoppedMode(0);
-	// HAL_Delay(100);
-	// TMC4671_highLevel_initEncoder_new(1);
-	// TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
-	// TMC4671_highLevel_positionMode_rampToZero(1);
-	// TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
-	// TMC4671_highLevel_positionMode_rampToZero(0);
-	// HAL_Delay(1000);
+	TMC4671_highLevel_initEncoder_new(0);
+	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
+	TMC4671_highLevel_positionMode_rampToZero(0);
+	TMC4671_highLevel_stoppedMode(0);
+	HAL_Delay(100);
+	TMC4671_highLevel_initEncoder_new(1);
+	TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
+	TMC4671_highLevel_positionMode_rampToZero(1);
+	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
+	TMC4671_highLevel_positionMode_rampToZero(0);
+
+	HAL_Delay(1000);
 
 	TMC4671_highLevel_initEncoder_new(2);
 	TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
@@ -93,7 +96,7 @@ void logic_init(void)
 
 	// HAL_Delay(5000);
 	// TMC4671_highLevel_pwmOff(3);
-	//for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
 	// for(i=0; i<4; i++)  TMC4671_highLevel_positionMode2(i);
 }
 
@@ -103,24 +106,58 @@ void logic_loop(void)
 	static int32_t positionTarget[4] = {0, 0, 0, 0};
 	static float angleIn[4] = {0, 0, 0, 0};
 	static uint8_t i;
+	static bool button_stop=true;
+
+
+
+	button_stop = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9);
+
+	if(button_stop == false)
+	{
+		for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+		//for(i=0; i<4; i++)	TMC4671_highLevel_pwmOff(i);
+	}
+	// if(button_init == false)
+	// {
+	//
+	// }
+
 
 	if(rx_byte_new)
 	{
 		rx_byte_new = 0;
 
-		if(rx_byte == ' ')	//TODO: switch case
+		switch(rx_byte)
 		{
+			case ' ':
 				for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
 				for(i=0; i<4; i++)	TMC4671_highLevel_pwmOff(i);
-		}
-		else if(rx_byte == 'f')	// toggle filters for target position
-		{
+				break;
+
+			case 'f':
 				for(i=0; i<4; i++)	TMC4671_highLevel_togglePositionFilter(i);
+				break;
+
+			case 'c':
+				for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 10000);
+				break;
+
+			case 'i':
+				for(i=0; i<4; i++)	TMC4671_highLevel_setIntegralPosition(i, 20);
+				break;
+
+			case 'o':
+				for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+				break;
+			case 'p':
+				for(i=0; i<4; i++)  TMC4671_highLevel_positionMode2(i);
+				break;
+
+			default:
+				break;
 		}
-		else if(rx_byte == 'i')
-		{
-			for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 10000);
-		}
+
+
 	}
 
 
@@ -160,7 +197,9 @@ void logic_loop(void)
 			"%s%s%s%s%s"
 			"pwm_in:     %d %d %d %d\r\n"
 			"angleIn:    % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
-			"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r\n\r", clear_string,
+			"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
+			"---------------------------\n\r"
+			"[o] ... stopped mode\n\r[p] ... position mode\n\r[SPACE] ... STOP\n\r\n\r", clear_string,
 			TMC4671_highLevel_getStatus(0), TMC4671_highLevel_getStatus(1), TMC4671_highLevel_getStatus(2), TMC4671_highLevel_getStatus(3),
 			pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3], angleIn[0], angleIn[1], angleIn[2], angleIn[3],
 			angleOut[0], angleOut[1], angleOut[2], angleOut[3]);
@@ -204,11 +243,15 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 int32_t clacAngle(uint8_t drv, float *angleIn)
 {
-	if(drv == 0 || drv == 2)
+	if(drv == 0)
 	{
 		angleOut[drv] = angleIn[drv] + angleIn[drv+1];
 	}
-	else if(drv == 1)
+	else if(drv == 2)
+	{
+		angleOut[drv] = -(angleIn[drv] + angleIn[drv+1]);
+	}
+	else if(drv == 1 || drv == 3)
 	{
 		angleOut[drv]= 2.490378*angleIn[drv] + 0.001711*angleIn[drv]*angleIn[drv] + 0.000138*angleIn[drv]*angleIn[drv]*angleIn[drv];
 	}

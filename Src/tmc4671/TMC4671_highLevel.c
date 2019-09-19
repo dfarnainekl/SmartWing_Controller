@@ -105,9 +105,8 @@ void TMC4671_highLevel_stoppedMode(uint8_t drv)
 }
 
 
-void TMC4671_highLevel_positionMode(uint8_t drv)
+void TMC4671_highLevel_positionMode(uint8_t drv) 	// Switch to position mode
 {
-	// Switch to position mode
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0); // target position 0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
 }
@@ -167,7 +166,7 @@ void TMC4671_highLevel_initEncoder_new(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 1);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_EXT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2500 << TMC4671_UD_EXT_SHIFT));
-	HAL_Delay(2000);
+	HAL_Delay(1000);
 	uint16_t angle = as5147_getAngle(drv);
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
@@ -180,6 +179,81 @@ void TMC4671_highLevel_initEncoder_new(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 3); // phi_e_abn
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, position );
 }
+
+void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv) // TODO read actual position before torque ramp, ramp position from actual to 0 afterwards
+{
+	uint16_t torque_flux_limit = 5000;
+	uint16_t torque_flux = 0;
+	uint8_t i;
+
+	torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
+
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 0);
+	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
+
+	for(i=0; i<100; i++)
+	{
+		torque_flux = (uint16_t)( (float)i/100.0*(float)torque_flux_limit );
+		tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux);
+		HAL_Delay(1);
+	}
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux_limit);
+}
+
+void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv)
+{
+	uint8_t i;
+	int32_t position = tmc4671_readInt(drv, TMC4671_PID_POSITION_ACTUAL);
+
+
+	for(i=100; i> 0; i--)
+	{
+		//TMC4671_highLevel_setPosition(drv, position);
+		tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, (int32_t)((float)position*(float)i/100.0) );
+		HAL_Delay(10);
+	}
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0);
+}
+
+void TMC4671_highLevel_togglePositionFilter(uint8_t drv)
+{
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
+	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, !enabled);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0);
+}
+
+void TMC4671_highLevel_setCurrentLimit(uint8_t drv, uint16_t torque_flux_limit)
+{
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux_limit);
+}
+
+void TMC4671_highLevel_setIntegralPosition(uint8_t drv, uint16_t integral)
+{
+	tmc4671_writeRegister16BitValue(drv, TMC4671_PID_POSITION_P_POSITION_I, BIT_0_TO_15, integral);
+}
+
+char* TMC4671_highLevel_getStatus(uint8_t drv)
+{
+	static char string[4][150];
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
+	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
+	uint16_t torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
+	uint16_t position_i = tmc4671_readRegister16BitValue(drv, TMC4671_PID_POSITION_P_POSITION_I, BIT_0_TO_15);
+	snprintf(&string[drv][0], 150,
+		"Drive %d\n\r"
+		"Position-Filter [f]: %s\r\n"
+		"Torque-Limit    [c]: %d\r\n"
+		"Position-I:     [i]: %d\r\n"
+		"---------------------------\n\r",
+			drv, enabled?"on":"off", torque_flux_limit, position_i);
+
+	return &string[drv][0];
+}
+
+
+
+
 
 void TMC4671_highLevel_positionTest(uint8_t drv)
 {
@@ -267,68 +341,4 @@ void TMC4671_highLevel_openLoopTest2(uint8_t drv) // to verify correct encoder i
 	// Switch to open loop velocity mode
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 8); // uq_ud_ext
 	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 1); // rotate right, velocity target 1
-}
-
-void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv) // TODO read actual position before torque ramp, ramp position from actual to 0 afterwards
-{
-	uint16_t torque_flux_limit = 5000;
-	uint16_t torque_flux = 0;
-	uint8_t i;
-
-	torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
-
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 0);
-	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); // position_mode
-
-	for(i=0; i<100; i++)
-	{
-		torque_flux = (uint16_t)( (float)i/100.0*(float)torque_flux_limit );
-		tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux);
-		HAL_Delay(1);
-	}
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux_limit);
-}
-
-void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv)
-{
-	uint8_t i;
-	int32_t position = tmc4671_readInt(drv, TMC4671_PID_POSITION_ACTUAL);
-
-
-	for(i=100; i> 0; i--)
-	{
-		//TMC4671_highLevel_setPosition(drv, position);
-		tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, (int32_t)((float)position*(float)i/100.0) );
-		HAL_Delay(10);
-	}
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0);
-}
-
-void TMC4671_highLevel_togglePositionFilter(uint8_t drv)
-{
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
-	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, !enabled);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0);
-}
-
-void TMC4671_highLevel_setCurrentLimit(uint8_t drv, uint16_t torque_flux_limit)
-{
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque_flux_limit);
-}
-
-char* TMC4671_highLevel_getStatus(uint8_t drv)
-{
-	static char string[4][100];
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
-	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
-	uint16_t torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
-	snprintf(&string[drv][0], 100,
-		"Drive %d\n\r"
-		"Position-Filter: %s\r\n"
-		"Torque-Limit:    %d\r\n"
-		"---------------------------\n\r",
-			drv, enabled?"on":"off", torque_flux_limit);
-
-	return &string[drv][0];
 }
