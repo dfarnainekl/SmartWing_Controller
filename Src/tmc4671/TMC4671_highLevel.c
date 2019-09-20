@@ -24,8 +24,17 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_dsADC_MCLK_A, (1 << 29)); // group a clock frequency 25MHz
 	tmc4671_writeInt(drv, TMC4671_dsADC_MCLK_B, 0); // group b clock frequency 0 --> off
 	tmc4671_writeInt(drv, TMC4671_dsADC_MDEC_B_MDEC_A, (1000 << TMC4671_DSADC_MDEC_B_SHIFT) | (1000 << TMC4671_DSADC_MDEC_A_SHIFT)); // decimation ratio FIXME adapt to clock
-	tmc4671_writeInt(drv, TMC4671_ADC_I0_SCALE_OFFSET, (-490 << TMC4671_ADC_I0_SCALE_SHIFT) | (swdriver[drv].ofs_i0 << TMC4671_ADC_I0_OFFSET_SHIFT)); // offset, scale 2mA/lsb
-	tmc4671_writeInt(drv, TMC4671_ADC_I1_SCALE_OFFSET, (-490 << TMC4671_ADC_I1_SCALE_SHIFT) | (swdriver[drv].ofs_i1 << TMC4671_ADC_I1_OFFSET_SHIFT)); // offset, scale 2mA/lsb
+
+	uint8_t i;
+	uint32_t adcOffs0 = 0;
+	uint32_t adcOffs1 = 0;
+	for(i=0; i<32; i++) adcOffs0 += TMC4671_getAdcRaw0(drv);
+	for(i=0; i<32; i++) adcOffs1 += TMC4671_getAdcRaw1(drv);
+	adcOffs0 /= 32;
+	adcOffs1 /= 32;
+
+	tmc4671_writeInt(drv, TMC4671_ADC_I0_SCALE_OFFSET, (-490 << TMC4671_ADC_I0_SCALE_SHIFT) | (adcOffs0 << TMC4671_ADC_I0_OFFSET_SHIFT)); // offset, scale 2mA/lsb
+	tmc4671_writeInt(drv, TMC4671_ADC_I1_SCALE_OFFSET, (-490 << TMC4671_ADC_I1_SCALE_SHIFT) | (adcOffs1 << TMC4671_ADC_I1_OFFSET_SHIFT)); // offset, scale 2mA/lsb
 
 	// ABN encoder settings
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0); // standard polarity and count direction, don't clear at n pulse
