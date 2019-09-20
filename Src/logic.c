@@ -6,10 +6,12 @@
 #include "usart.h"
 #include "tim.h"
 #include <stdbool.h>
+#include <math.h>
 
 
 volatile uint16_t systick_counter = 0;
 volatile uint16_t systick_counter_2 = 0;
+volatile uint8_t 	systick_counter_3 = 0;
 
 volatile uint8_t rx_byte_new = 0;
 uint8_t rx_byte;
@@ -20,6 +22,10 @@ volatile float angleOut[4] = {0, 0, 0, 0};
 uint16_t angle[4];
 
 const char clear_string[7] = {27, '[', '2','J', 27, '[', 'H'};
+bool sine = false;
+volatile uint32_t k = 0;
+volatile uint16_t f = 1;
+volatile uint8_t  a = 5;
 
 void logic_init(void)
 {
@@ -57,6 +63,7 @@ void logic_init(void)
 	} //TODO: do-while()
 	rx_byte_new = 0;
 
+
 	TMC4671_highLevel_initEncoder_new(0);
 	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
 	TMC4671_highLevel_positionMode_rampToZero(0);
@@ -68,7 +75,7 @@ void logic_init(void)
 	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
 	TMC4671_highLevel_positionMode_rampToZero(0);
 
-	HAL_Delay(1000);
+	HAL_Delay(100);
 
 	TMC4671_highLevel_initEncoder_new(2);
 	TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
@@ -150,8 +157,49 @@ void logic_loop(void)
 			case 'o':
 				for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
 				break;
+
 			case 'p':
-				for(i=0; i<4; i++)  TMC4671_highLevel_positionMode2(i);
+				//for(i=0; i<4; i++)  TMC4671_highLevel_positionMode2(i);
+				TMC4671_highLevel_positionMode_rampToZero(1);
+				TMC4671_highLevel_positionMode_rampToZero(3);
+				TMC4671_highLevel_positionMode2(0);
+				TMC4671_highLevel_positionMode2(1);
+				break;
+
+			case 'm':
+				sine = true;
+				k = 0;
+				f = 1;
+				break;
+
+			case 'n':
+				sine = false;
+				k = 0;
+				break;
+
+			case 'b':
+				f++;
+				k = 0;
+				break;
+
+			case 'v':
+				if(f)
+					f--;
+				k = 0;
+				break;
+
+			case 'x':
+				a++;
+				break;
+
+			case 'y':
+				if(a)
+					a--;
+				break;
+
+			case 'z':
+				TMC4671_highLevel_stoppedMode(3);
+				//TMC4671_highLevel_pwmOff(3);
 				break;
 
 			default:
@@ -160,13 +208,28 @@ void logic_loop(void)
 	} // end of: if(rx_byte_new)
 
 
-	if(pwm_updated)
+	if(pwm_updated && sine == false)
 	{
 		pwm_updated = false;
 
 		for(i=0; i<4; i++) 	angleIn[i] =  ( (float)(pwm_in[i] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 		for(i=0; i<4; i++)	positionTarget[i] = clacAngle(i, angleIn);
 		for(i=0; i<4; i++) 	TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
+	}
+
+	if(systick_counter_3 && sine)
+	{
+		systick_counter_3 = 0;
+		k++;
+		angleIn[0]= 0;
+		angleIn[1]= a*sin(2*3.14159265*f*k*0.001);
+		angleIn[2]= 0;
+		angleIn[3]= a*sin(2*3.14159265*f*k*0.001);
+
+		for(i=0; i<4; i++)	positionTarget[i] = clacAngle(i, angleIn);
+		for(i=0; i<4; i++) 	TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
+
+
 	}
 
 	if(systick_counter >= 20) //50Hz
@@ -203,6 +266,7 @@ void logic_loop(void)
 			TMC4671_highLevel_getStatus(0), TMC4671_highLevel_getStatus(1), TMC4671_highLevel_getStatus(2), TMC4671_highLevel_getStatus(3),
 			pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3], angleIn[0], angleIn[1], angleIn[2], angleIn[3],
 			angleOut[0], angleOut[1], angleOut[2], angleOut[3], (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
+//	uint16_t len = snprintf(string, 1000,"%d;%ld;%ld\n\r", pwm_in[1], TMC4671_highLevel_getPositionTarget(1), TMC4671_highLevel_getPositionActual(1));
 		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	} // end of: if(systick_counter_2 >= 200) //5Hz
 
@@ -211,6 +275,7 @@ void logic_loop(void)
 
 void HAL_SYSTICK_Callback(void)
 {
+	systick_counter_3++;
 	systick_counter++;
 	systick_counter_2++;
 

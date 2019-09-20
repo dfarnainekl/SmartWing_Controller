@@ -27,7 +27,8 @@ void TMC4671_highLevel_togglePositionFilter(uint8_t drv);
 void TMC4671_highLevel_setCurrentLimit(uint8_t drv, uint16_t torque_flux_limit);
 void TMC4671_highLevel_setIntegralPosition(uint8_t drv, uint16_t integral);
 char* TMC4671_highLevel_getStatus(uint8_t drv);
-
+int32_t TMC4671_highLevel_getPositionTarget(uint8_t drv);
+int32_t TMC4671_highLevel_getPositionActual(uint8_t drv);
 
 void TMC4671_highLevel_positionTest(uint8_t drv);
 void TMC4671_highLevel_torqueTest(uint8_t drv);
