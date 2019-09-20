@@ -44,12 +44,16 @@ void logic_init(void)
 	rx_byte_new = 0;
 	while( !(rx_byte_new && rx_byte == 's') && button_init == true)
 	{
-			button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
-			for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
-			uint16_t len = snprintf(string, 100, "%senc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n\r",
-															clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
-			HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
-			HAL_Delay(200);
+		static uint16_t adcRaw0[4];
+		static uint16_t adcRaw1[4];
+		button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
+		for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
+		for(i=0; i<4; i++)	adcRaw0[i] = TMC4671_getAdcRaw0(i);
+		for(i=0; i<4; i++)	adcRaw1[i] = TMC4671_getAdcRaw1(i);
+		uint16_t len = snprintf(string, 100, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d adcRaw0[0]: %d adcRaw1[0]: %d\n\r",
+											clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5), adcRaw0[0], adcRaw1[0]);
+		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+		HAL_Delay(200);
 	} //TODO: do-while()
 	rx_byte_new = 0;
 

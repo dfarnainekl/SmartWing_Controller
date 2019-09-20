@@ -15,6 +15,8 @@ void TMC4671_highLevel_setPosition(uint8_t drv, int32_t position);
 void TMC4671_highLevel_setPosition_nonBlocking(uint8_t drv, int32_t position);
 
 void TMC4671_highLevel_printOffsetAngle(uint8_t drv);
+uint16_t TMC4671_getAdcRaw0(uint8_t drv);
+uint16_t TMC4671_getAdcRaw1(uint8_t drv);
 void TMC4671_highLevel_initEncoder(uint8_t drv);
 
 void TMC4671_highLevel_initEncoder_new(uint8_t drv);

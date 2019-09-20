@@ -147,6 +147,19 @@ void TMC4671_highLevel_printOffsetAngle(uint8_t drv)
 }
 
 
+uint16_t TMC4671_getAdcRaw0(uint8_t drv)
+{
+	tmc4671_writeInt(drv, TMC4671_ADC_RAW_ADDR, 0);
+	return tmc4671_readInt(drv, TMC4671_ADC_RAW_DATA) & 0xFFFF;
+}
+
+uint16_t TMC4671_getAdcRaw1(uint8_t drv)
+{
+	tmc4671_writeInt(drv, TMC4671_ADC_RAW_ADDR, 0);
+	return (tmc4671_readInt(drv, TMC4671_ADC_RAW_DATA) >> 16) & 0xFFFF;
+}
+
+
 void TMC4671_highLevel_initEncoder(uint8_t drv)
 {
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 8); // uq_ud_ext
