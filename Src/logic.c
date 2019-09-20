@@ -17,13 +17,13 @@ uint8_t rx_byte;
 volatile uint16_t pwm_in[4] = {1500, 1500, 1500, 1500};
 volatile bool pwm_updated = false;
 volatile float angleOut[4] = {0, 0, 0, 0};
+uint16_t angle[4];
 
 const char clear_string[7] = {27, '[', '2','J', 27, '[', 'H'};
 
 void logic_init(void)
 {
 	uint8_t i;
-	uint16_t angle[4];
 	static char string[100];
 	static bool button_init=true;
 
@@ -42,12 +42,12 @@ void logic_init(void)
 
 	HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
 	rx_byte_new = 0;
-	// TODO: wait for button press to set zero positions
 	while( !(rx_byte_new && rx_byte == 's') && button_init == true)
 	{
 			button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
 			for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
-			uint16_t len = snprintf(string, 100, "%senc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n\r", clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
+			uint16_t len = snprintf(string, 100, "%senc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n\r",
+															clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
 			HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 			HAL_Delay(200);
 	} //TODO: do-while()
@@ -96,7 +96,7 @@ void logic_init(void)
 
 	// HAL_Delay(5000);
 	// TMC4671_highLevel_pwmOff(3);
-	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+	//for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
 	// for(i=0; i<4; i++)  TMC4671_highLevel_positionMode2(i);
 }
 
@@ -115,12 +115,9 @@ void logic_loop(void)
 	if(button_stop == false)
 	{
 		for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
-		//for(i=0; i<4; i++)	TMC4671_highLevel_pwmOff(i);
+		for(i=0; i<4; i++)	TMC4671_highLevel_pwmOff(i);
 	}
-	// if(button_init == false)
-	// {
-	//
-	// }
+
 
 
 	if(rx_byte_new)
@@ -155,22 +152,15 @@ void logic_loop(void)
 
 			default:
 				break;
-		}
-
-
-	}
+		} // end of: switch(rx_byte)
+	} // end of: if(rx_byte_new)
 
 
 	if(pwm_updated)
 	{
 		pwm_updated = false;
 
-		for(i=0; i<4; i++)
-		{
-			//positionTarget[i] = (int32_t)pwm_in[i] - 1500;
-			angleIn[i] =  ( (float)(pwm_in[i] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
-		}
-
+		for(i=0; i<4; i++) 	angleIn[i] =  ( (float)(pwm_in[i] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 		for(i=0; i<4; i++)	positionTarget[i] = clacAngle(i, angleIn);
 		for(i=0; i<4; i++) 	TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
 	}
@@ -183,7 +173,6 @@ void logic_loop(void)
 	if(systick_counter_2 >= 200) //5Hz
 	{
 		systick_counter_2 = 0;
-		// -------------------------------------------------------------------------
 		static char string[1000];
 		// -------------------------------------------------------------------------
 		// uint16_t angle0 = as5147_getAngle(0);
@@ -193,24 +182,27 @@ void logic_loop(void)
 		// uint16_t angle0 = as5147_getAngle(0);
 		//uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (11bit) %d (16bit)\n\r", 0, angle0, ((uint16_t)angle0 << 5));
 		// -------------------------------------------------------------------------
+		// uint16_t len = snprintf(string, 128, "(uint16_t)%d\t(int16_t)%d\t%d\t%d\t%d\n\r", ((uint16_t)angle << 5),(int16_t)(angle << 5), DRV0_OFFSET_ENC_PHIM, DRV0_OFFSET_ENC_PHIE, DRV0_OFFSET_PHIM_PHIE);
+		// -------------------------------------------------------------------------
+		// uint16_t len = snprintf(string, 128, "%d\n\r", tmc6200_readInt(1, 0x01));
+		// -------------------------------------------------------------------------
+		for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
 		uint16_t len = snprintf(string, 1000,
 			"%s%s%s%s%s"
 			"pwm_in:     %d %d %d %d\r\n"
 			"angleIn:    % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
 			"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
 			"---------------------------\n\r"
+			"enc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n\r"
+			"---------------------------\n\r"
 			"[o] ... stopped mode\n\r[p] ... position mode\n\r[SPACE] ... STOP\n\r\n\r", clear_string,
 			TMC4671_highLevel_getStatus(0), TMC4671_highLevel_getStatus(1), TMC4671_highLevel_getStatus(2), TMC4671_highLevel_getStatus(3),
 			pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3], angleIn[0], angleIn[1], angleIn[2], angleIn[3],
-			angleOut[0], angleOut[1], angleOut[2], angleOut[3]);
-		// -------------------------------------------------------------------------
-		// uint16_t len = snprintf(string, 128, "(uint16_t)%d\t(int16_t)%d\t%d\t%d\t%d\n\r", ((uint16_t)angle << 5),(int16_t)(angle << 5), DRV0_OFFSET_ENC_PHIM, DRV0_OFFSET_ENC_PHIE, DRV0_OFFSET_PHIM_PHIE);
-		// -------------------------------------------------------------------------
-		// uint16_t len = snprintf(string, 128, "%d\n\r", tmc6200_readInt(1, 0x01));
-		// -------------------------------------------------------------------------
+			angleOut[0], angleOut[1], angleOut[2], angleOut[3], (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
 		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
-	}
-}
+	} // end of: if(systick_counter_2 >= 200) //5Hz
+
+} // end of: void logic_loop(void)
 
 
 void HAL_SYSTICK_Callback(void)
@@ -231,6 +223,29 @@ void HAL_SYSTICK_Callback(void)
 }
 
 
+int32_t clacAngle(uint8_t drv, float *angleIn)
+{
+	if(drv == 0)
+	{
+		angleOut[drv] = -(angleIn[drv] + angleIn[drv+1]);
+	}
+	else if(drv == 2)
+	{
+		angleOut[drv] = angleIn[drv] + angleIn[drv+1];
+	}
+	else if(drv == 1)
+	{
+		angleOut[drv]= -(2.490378*angleIn[drv] + 0.001711*angleIn[drv]*angleIn[drv] + 0.000138*angleIn[drv]*angleIn[drv]*angleIn[drv]);
+	}
+	else if(drv == 3)
+	{
+		angleOut[drv]= (2.490378*angleIn[drv] + 0.001711*angleIn[drv]*angleIn[drv] + 0.000138*angleIn[drv]*angleIn[drv]*angleIn[drv]);
+	}
+
+	return (int32_t)(angleOut[drv] * 2.0 / 360.0 * 65536.0);
+}
+
+
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart->Instance == USART3)
@@ -238,25 +253,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     rx_byte_new = 1;
 		HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
   }
-}
-
-
-int32_t clacAngle(uint8_t drv, float *angleIn)
-{
-	if(drv == 0)
-	{
-		angleOut[drv] = angleIn[drv] + angleIn[drv+1];
-	}
-	else if(drv == 2)
-	{
-		angleOut[drv] = -(angleIn[drv] + angleIn[drv+1]);
-	}
-	else if(drv == 1 || drv == 3)
-	{
-		angleOut[drv]= 2.490378*angleIn[drv] + 0.001711*angleIn[drv]*angleIn[drv] + 0.000138*angleIn[drv]*angleIn[drv]*angleIn[drv];
-	}
-
-	return (int32_t)(angleOut[drv] * 2.0 / 360.0 * 65536.0);
 }
 
 

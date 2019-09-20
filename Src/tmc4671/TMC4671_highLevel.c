@@ -166,7 +166,7 @@ void TMC4671_highLevel_initEncoder_new(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 1);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_EXT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2500 << TMC4671_UD_EXT_SHIFT));
-	HAL_Delay(1000);
+	HAL_Delay(2000);
 	uint16_t angle = as5147_getAngle(drv);
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
