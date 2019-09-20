@@ -24,7 +24,7 @@ const char clear_string[7] = {27, '[', '2','J', 27, '[', 'H'};
 void logic_init(void)
 {
 	uint8_t i;
-	static char string[100];
+	static char string[200];
 	static bool button_init=true;
 
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
@@ -50,8 +50,8 @@ void logic_init(void)
 		for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
 		for(i=0; i<4; i++)	adcRaw0[i] = TMC4671_getAdcRaw0(i);
 		for(i=0; i<4; i++)	adcRaw1[i] = TMC4671_getAdcRaw1(i);
-		uint16_t len = snprintf(string, 100, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d adcRaw0[0]: %d adcRaw1[0]: %d\n\r",
-											clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5), adcRaw0[0], adcRaw1[0]);
+		uint16_t len = snprintf(string, 200, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d adcRaw1[0]: %5d\n\r\tadcRaw0[1]: %5d adcRaw1[1]: %5d\tadcRaw0[2]: %5d adcRaw1[2]: %5d\tadcRaw0[3]: %5d adcRaw1[3]: %5d",
+											clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5), adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
 		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 		HAL_Delay(200);
 	} //TODO: do-while()
