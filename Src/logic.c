@@ -9,6 +9,22 @@
 #include <math.h>
 
 
+#define SWEEP_TA	0.003
+#define SWEEP_N		10240
+
+sweep_t sweep = {	.Ta = SWEEP_TA,
+									.N = SWEEP_N,
+									.U = 2,
+									.omegaStart = 2*M_PI*1,
+									.omegaEnd = 2*M_PI*10,
+									.k = 0,
+									.mode = AIL
+								};
+
+__attribute__((section(".ram_d1"))) data_t data[SWEEP_N];
+
+
+
 volatile uint16_t systick_counter = 0;
 volatile uint16_t systick_counter_2 = 0;
 volatile uint8_t 	systick_counter_3 = 0;
@@ -22,10 +38,13 @@ volatile float angleOut[4] = {0, 0, 0, 0};
 uint16_t angle[4];
 
 const char clear_string[7] = {27, '[', '2','J', 27, '[', 'H'};
-bool sine = false;
-volatile uint32_t k = 0;
-volatile uint16_t f = 1;
-volatile uint8_t  a = 5;
+
+
+bool chirp = false;
+
+
+
+
 
 void logic_init(void)
 {
@@ -116,10 +135,8 @@ void logic_loop(void)
 {
 	static int32_t positionTarget[4] = {0, 0, 0, 0};
 	static float angleIn[4] = {0, 0, 0, 0};
-	static uint8_t i;
+	static uint16_t i;
 	static bool button_stop=true;
-
-
 
 	button_stop = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_9);
 
@@ -147,7 +164,7 @@ void logic_loop(void)
 				break;
 
 			case 'c':
-				for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 10000);
+				for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 30000);
 				break;
 
 			case 'i':
@@ -166,41 +183,41 @@ void logic_loop(void)
 				TMC4671_highLevel_positionMode2(1);
 				break;
 
-			case 'm':
-				sine = true;
-				k = 0;
-				f = 1;
+			case '1': // testcase 1: sweep aileron
+				chirp = true;
+				systick_counter_3 = 0;
+				sweep.k = 0;
+				sweep.mode = AIL;
 				break;
 
-			case 'n':
-				sine = false;
-				k = 0;
+			case '2': // testcase 1: sweep flap
+				chirp = true;
+				systick_counter_3 = 0;
+				sweep.k = 0;
+				sweep.U = 1;
+				sweep.mode = FLP;
 				break;
 
-			case 'b':
-				f++;
-				k = 0;
+			case '9': // stop sweep
+				chirp = false;
+				systick_counter_3 = 0;
+				sweep.k = 0;
 				break;
 
-			case 'v':
-				if(f)
-					f--;
-				k = 0;
-				break;
 
-			case 'x':
-				a++;
-				break;
-
-			case 'y':
-				if(a)
-					a--;
-				break;
-
-			case 'z':
-				TMC4671_highLevel_stoppedMode(3);
-				//TMC4671_highLevel_pwmOff(3);
-				break;
+			// case '0': // print data
+			// 	sweep.len = snprintf(sweep.string,200,"%s", clear_string);
+			// 	HAL_UART_Transmit_IT(&huart3, (uint8_t*)sweep.string, sweep.len);
+			// 	for(i=0; i<SWEEP_N; i++)
+			// 	{
+			// 		HAL_Delay(1);
+			// 		//static char string[100];
+			// 		sweep.len = snprintf(sweep.string, 200,"%d;%ld;%ld;%ld;%ld;%ld;%ld;%ld;%ld\n\r", i,
+			// 		data[i].posTarget[0], data[i].posTarget[1], data[i].posTarget[2], data[i].posTarget[3],
+			// 		data[i].posActual[0],	data[i].posActual[1], data[i].posActual[2], data[i].posActual[3]);
+			// 		HAL_UART_Transmit_IT(&huart3, (uint8_t*)sweep.string, sweep.len);
+			// 	}
+			// 	break;
 
 			default:
 				break;
@@ -208,7 +225,7 @@ void logic_loop(void)
 	} // end of: if(rx_byte_new)
 
 
-	if(pwm_updated && sine == false)
+	if(pwm_updated && chirp == false)
 	{
 		pwm_updated = false;
 
@@ -217,19 +234,42 @@ void logic_loop(void)
 		for(i=0; i<4; i++) 	TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
 	}
 
-	if(systick_counter_3 && sine)
+
+	if(systick_counter_3 && chirp)
 	{
+		static float pos, r, t;
 		systick_counter_3 = 0;
-		k++;
-		angleIn[0]= 0;
-		angleIn[1]= a*sin(2*3.14159265*f*k*0.001);
-		angleIn[2]= 0;
-		angleIn[3]= a*sin(2*3.14159265*f*k*0.001);
+		sweep.k++;
+
+		t = sweep.k * sweep.Ta;
+		r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
+		pos = sweep.U*r*sin(sweep.omegaStart*t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(t*t) );
+
+		if(	sweep.mode == AIL)//aileron sweep
+		{
+			angleIn[0]= pos;
+			angleIn[1]= 0;
+			angleIn[2]= -pos;
+			angleIn[3]= 0;
+		}
+		else if(	sweep.mode == FLP)//flap sweep
+		{
+			angleIn[0]= 0;
+			angleIn[1]= pos;
+			angleIn[2]= 0;
+			angleIn[3]= pos;
+		}
 
 		for(i=0; i<4; i++)	positionTarget[i] = clacAngle(i, angleIn);
 		for(i=0; i<4; i++) 	TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
-
-
+		for(i=0; i<4; i++) data[sweep.k].posTarget[i] = positionTarget[i];
+		for(i=0; i<4; i++) data[sweep.k].posActual[i] = TMC4671_highLevel_getPositionActual(i);
+		if(sweep.k >= sweep.N-1)
+		{
+			chirp = false;
+			sweep.k = 0;
+			pos  = 0;
+		}
 	}
 
 	if(systick_counter >= 20) //50Hz
@@ -240,7 +280,7 @@ void logic_loop(void)
 	if(systick_counter_2 >= 200) //5Hz
 	{
 		systick_counter_2 = 0;
-		static char string[1000];
+		//static char string[1000];
 		// -------------------------------------------------------------------------
 		// uint16_t angle0 = as5147_getAngle(0);
 		// uint16_t angle1 = as5147_getAngle(1);
@@ -253,21 +293,21 @@ void logic_loop(void)
 		// -------------------------------------------------------------------------
 		// uint16_t len = snprintf(string, 128, "%d\n\r", tmc6200_readInt(1, 0x01));
 		// -------------------------------------------------------------------------
-		for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
-		uint16_t len = snprintf(string, 1000,
-			"%s%s%s%s%s"
-			"pwm_in:     %d %d %d %d\r\n"
-			"angleIn:    % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
-			"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
-			"---------------------------\n\r"
-			"enc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n\r"
-			"---------------------------\n\r"
-			"[o] ... stopped mode\n\r[p] ... position mode\n\r[SPACE] ... STOP\n\r\n\r", clear_string,
-			TMC4671_highLevel_getStatus(0), TMC4671_highLevel_getStatus(1), TMC4671_highLevel_getStatus(2), TMC4671_highLevel_getStatus(3),
-			pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3], angleIn[0], angleIn[1], angleIn[2], angleIn[3],
-			angleOut[0], angleOut[1], angleOut[2], angleOut[3], (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
-//	uint16_t len = snprintf(string, 1000,"%d;%ld;%ld\n\r", pwm_in[1], TMC4671_highLevel_getPositionTarget(1), TMC4671_highLevel_getPositionActual(1));
-		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+		// for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
+		// uint16_t len = snprintf(string, 1000,
+		// 	"%s%s%s%s%s"
+		// 	"pwm_in:     %d %d %d %d\r\n"
+		// 	"angleIn:    % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
+		// 	"angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n\r"
+		// 	"---------------------------\n\r"
+		// 	"enc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n\r"
+		// 	"---------------------------\n\r"
+		// 	"[o] ... stopped mode\n\r[p] ... position mode\n\r[SPACE] ... STOP\n\r\n\r", clear_string,
+		// 	TMC4671_highLevel_getStatus(0), TMC4671_highLevel_getStatus(1), TMC4671_highLevel_getStatus(2), TMC4671_highLevel_getStatus(3),
+		// 	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3], angleIn[0], angleIn[1], angleIn[2], angleIn[3],
+		// 	angleOut[0], angleOut[1], angleOut[2], angleOut[3], (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
+		// 	uint16_t len = snprintf(string, 1000,"%d;%ld;%ld\n\r", pwm_in[1], TMC4671_highLevel_getPositionTarget(1), TMC4671_highLevel_getPositionActual(1));
+		// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	} // end of: if(systick_counter_2 >= 200) //5Hz
 
 } // end of: void logic_loop(void)
@@ -393,4 +433,14 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 				break;
 		}
 	}
+}
+
+float sat(float x)
+{
+	if(x >= 1)
+		return 1;
+	else if (x <= -1)
+		return -1;
+	else
+		return x;
 }

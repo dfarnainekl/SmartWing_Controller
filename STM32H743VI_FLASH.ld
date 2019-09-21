@@ -129,6 +129,12 @@ SECTIONS
   } >DTCMRAM AT> FLASH
 
   
+  .ram_d1 :
+  {
+  *(.ram_d1*);
+  } >RAM_D1
+  
+  
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :
