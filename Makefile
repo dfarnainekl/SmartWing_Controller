@@ -71,6 +71,7 @@ Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c \
 Src/system_stm32h7xx.c \
 Src/logic.c \
 Src/as5147.c \
+Src/as5047U.c \
 Src/tmc6200/TMC6200.c \
 Src/tmc6200/TMC6200_highLevel.c \
 Src/tmc4671/TMC4671.c \

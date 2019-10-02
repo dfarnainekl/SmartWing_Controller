@@ -38,7 +38,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 
 	// ABN encoder settings
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0); // standard polarity and count direction, don't clear at n pulse
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PPR, 2048); // decoder pulses per revolution
+	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PPR, 16384); // decoder pulses per revolution
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // decoder angle 0 FIXME: writing anything else doesn't work but writing current angle would allow for more elegant solution. 3 lines below could be deleted, see git history
 	//uint16_t angle_current = (as5147_getAngle(drv) << 5);  // current decoder angle
 	//swdriver[drv].ofs_enc_phim += angle_current;
@@ -242,7 +242,7 @@ void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv)
 	uint8_t i;
 	int32_t position = tmc4671_readInt(drv, TMC4671_PID_POSITION_ACTUAL);
 
-	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3); 
+	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 3);
 
 	for(i=100; i> 0; i--)
 	{

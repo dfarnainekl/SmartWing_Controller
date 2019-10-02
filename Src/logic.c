@@ -2,6 +2,7 @@
 #include "swdriver.h"
 #include "tmc6200/TMC6200_highLevel.h"
 #include "tmc4671/TMC4671_highLevel.h"
+#include "as5047U.h"
 #include "as5147.h"
 #include "usart.h"
 #include "tim.h"
@@ -21,7 +22,7 @@ sweep_t sweep = {	.Ta = SWEEP_TA,
 									.mode = AIL
 								};
 
-__attribute__((section(".ram_d1"))) data_t data[SWEEP_N];
+//__attribute__((section(".ram_d1"))) data_t data[SWEEP_N];
 
 
 
@@ -37,20 +38,20 @@ volatile bool pwm_updated = false;
 volatile float angleOut[4] = {0, 0, 0, 0};
 uint16_t angle[4];
 
-const char clear_string[7] = {27, '[', '2','J', 27, '[', 'H'};
+
 
 
 bool chirp = false;
 
 
-
+const char clear_string[7] = {27, '[', '2','J', 27, '[', 'H'};
 
 
 void logic_init(void)
 {
 	uint8_t i;
 	static char string[500];
-	static bool button_init=true;
+	//static bool button_init=true;
 
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 	HAL_Delay(500);
@@ -65,57 +66,77 @@ void logic_init(void)
 	HAL_Delay(10);
 
 
+
+	as5047U_setABIResolution14Bit(0);
+	TMC4671_highLevel_initEncoder_new(0);
+	//TMC4671_highLevel_openLoopTest2(0);
+
+	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+
 	HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
 	rx_byte_new = 0;
-	while( !(rx_byte_new && rx_byte == 's') && button_init == true)
+	while( !(rx_byte_new && rx_byte == 's'))
 	{
-		static uint16_t adcRaw0[4];
-		static uint16_t adcRaw1[4];
-		button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
-		for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
-		for(i=0; i<4; i++)	adcRaw0[i] = TMC4671_getAdcRaw0(i);
-		for(i=0; i<4; i++)	adcRaw1[i] = TMC4671_getAdcRaw1(i);
-		uint16_t len = snprintf(string, 500, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d\tadcRaw1[0]: %5d\n\radcRaw0[1]: %5d\tadcRaw1[1]: %5d\n\radcRaw0[2]: %5d\tadcRaw1[2]: %5d\n\radcRaw0[3]: %5d\tadcRaw1[3]: %5d",
-											clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5), adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
+		angle[0] = as5147_getAngle(0);
+		angle[1] = as5047U_getAngle_fast(0);
+		angle[2] = as5047U_getAngle(0);
+
+		uint16_t len = snprintf(string, 500, "%senc[0] old: %5d\n\renc[0] new: %5d\n\renc[0] new: %5d",
+													  clear_string,	(angle[0] << 5), 	angle[1], angle[2]);
 		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 		HAL_Delay(200);
 	} //TODO: do-while()
 	rx_byte_new = 0;
 
-
-	TMC4671_highLevel_initEncoder_new(0);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
-	TMC4671_highLevel_positionMode_rampToZero(0);
-	TMC4671_highLevel_stoppedMode(0);
-	HAL_Delay(100);
-	TMC4671_highLevel_initEncoder_new(1);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
-	TMC4671_highLevel_positionMode_rampToZero(1);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
-	TMC4671_highLevel_positionMode_rampToZero(0);
-
-	HAL_Delay(100);
-
-	TMC4671_highLevel_initEncoder_new(2);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
-	TMC4671_highLevel_positionMode_rampToZero(2);
-	TMC4671_highLevel_stoppedMode(2);
-	HAL_Delay(100);
-	TMC4671_highLevel_initEncoder_new(3);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(3);
-	TMC4671_highLevel_positionMode_rampToZero(3);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
-	TMC4671_highLevel_positionMode_rampToZero(2);
+	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+	for(i=0; i<4; i++) 	TMC4671_highLevel_pwmOff(i);
 
 
-	//HAL_Delay(1000);
-	// for(i=0; i<2; i++)
+	// HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
+	// rx_byte_new = 0;
+	// while( !(rx_byte_new && rx_byte == 's') && button_init == true)
 	// {
-	// 	TMC4671_highLevel_initEncoder_new(i);
-	// 	TMC4671_highLevel_positionMode_fluxTorqueRamp(i);
-	// 	TMC4671_highLevel_positionMode_rampToZero(i);
-	// 	HAL_Delay(1000);
-	// }
+	// 	static uint16_t adcRaw0[4];
+	// 	static uint16_t adcRaw1[4];
+	// 	button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
+	// 	for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
+	// 	for(i=0; i<4; i++)	adcRaw0[i] = TMC4671_getAdcRaw0(i);
+	// 	for(i=0; i<4; i++)	adcRaw1[i] = TMC4671_getAdcRaw1(i);
+	// 	uint16_t len = snprintf(string, 500, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d\tadcRaw1[0]: %5d\n\radcRaw0[1]: %5d\tadcRaw1[1]: %5d\n\radcRaw0[2]: %5d\tadcRaw1[2]: %5d\n\radcRaw0[3]: %5d\tadcRaw1[3]: %5d",
+	// 										clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5), adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
+	// 	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+	// 	HAL_Delay(200);
+	// } //TODO: do-while()
+	// rx_byte_new = 0;
+
+
+	// // initialize left wing
+	// TMC4671_highLevel_initEncoder_new(0);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
+	// TMC4671_highLevel_positionMode_rampToZero(0);
+	// TMC4671_highLevel_stoppedMode(0);
+	// HAL_Delay(100);
+	// TMC4671_highLevel_initEncoder_new(1);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
+	// TMC4671_highLevel_positionMode_rampToZero(1);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
+	// TMC4671_highLevel_positionMode_rampToZero(0);
+	//
+	// HAL_Delay(100);
+	//
+	// // initialize right wing
+	// TMC4671_highLevel_initEncoder_new(2);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
+	// TMC4671_highLevel_positionMode_rampToZero(2);
+	// TMC4671_highLevel_stoppedMode(2);
+	// HAL_Delay(100);
+	// TMC4671_highLevel_initEncoder_new(3);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(3);
+	// TMC4671_highLevel_positionMode_rampToZero(3);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
+	// TMC4671_highLevel_positionMode_rampToZero(2);
+
+
 
 
 	// pwm inputs //FIXME: timer interrupt priority lower than spi?
@@ -124,11 +145,12 @@ void logic_init(void)
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 
-	for(i=0; i<4; i++)	TMC4671_highLevel_setIntegralPosition(i, 20);
+	//for(i=0; i<4; i++)	TMC4671_highLevel_setIntegralPosition(i, 20);
 
 	// HAL_Delay(5000);
-	// TMC4671_highLevel_pwmOff(3);
-	//for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+	for(i=0; i<4; i++) 	TMC4671_highLevel_pwmOff(i);
+
 	// for(i=0; i<4; i++)  TMC4671_highLevel_positionMode2(i);
 }
 
@@ -264,8 +286,8 @@ void logic_loop(void)
 
 		for(i=0; i<4; i++)	positionTarget[i] = clacAngle(i, angleIn);
 		for(i=0; i<4; i++) 	TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
-		for(i=0; i<4; i++) data[sweep.k].posTarget[i] = positionTarget[i];
-		for(i=0; i<4; i++) data[sweep.k].posActual[i] = TMC4671_highLevel_getPositionActual(i);
+		// for(i=0; i<4; i++) data[sweep.k].posTarget[i] = positionTarget[i];
+		// for(i=0; i<4; i++) data[sweep.k].posActual[i] = TMC4671_highLevel_getPositionActual(i);
 		if(sweep.k >= sweep.N-1)
 		{
 			chirp = false;
