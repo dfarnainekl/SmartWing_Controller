@@ -47,19 +47,52 @@ static uint8_t gencrc(uint8_t *data, uint8_t len)
     return crc;
 }
 
+static uint32_t as5047U_sendCommand(uint8_t drv, uint8_t rw, uint16_t address)
+{
+	uint16_t data_send = 0;
+	uint32_t data_receive = 0;
+
+	uint8_t txData[3];
+	uint8_t rxData[3];
+
+	address &= 0x3FFF;
+	data_send = address | (rw<<14);
+
+	txData[0] = (uint8_t)( (data_send & 0xff00) >> 8);
+	txData[1] = (uint8_t)(data_send & 0x00ff) ;
+	txData[2] = gencrc(txData, 2);
+
+	spiMode_set(drv);
+	HAL_Delay(1);
+	swdriver_setCsnEncoder(drv, false);
+	HAL_SPI_TransmitReceive(swdriver[drv].SPI, txData, rxData, 3, HAL_MAX_DELAY);
+	swdriver_setCsnEncoder(drv, true);
+	HAL_Delay(1);
+	spiMode_reset(drv);
+
+	data_receive =  ((uint32_t)rxData[0]<<16) | ((uint32_t)rxData[1]<<8) | (uint32_t)rxData[2];
+	return data_receive;
+}
+
 
 static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 {
 	static char string[500];
+	static char string2[50];
 	uint32_t data32 = 0;
 	uint16_t data16 = 0;
 
 	sprintf(string, "\n\r\n\r");
 
-	if (warning)
-		strcat (string,"WARNING\n\r");
 	if(error)
-		strcat (string,"ERROR\n\r");
+		strcat (string,"ERROR\t");
+	else if (warning)
+		strcat (string,"WARNING\t");
+
+
+
+	sprintf(string2, "drv %d\n\r", drv);
+	strcat (string,string2);
 
 	as5047U_sendCommand(drv, AS5047U_READ, ADDR_ERRFL);
 	data32 = as5047U_sendCommand(drv, AS5047U_READ, ADDR_ERRFL);
@@ -87,20 +120,17 @@ static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 		strcat (string,"CORDIC_Overflow\n\r");
 
 	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
-	HAL_Delay(10);
+	HAL_Delay(100);
 }
 
 
-
-
-
-uint32_t as5047U_sendData(uint8_t drv, uint16_t data)
+static uint32_t as5047U_sendData(uint8_t drv, uint16_t data)
 {
 	return as5047U_sendCommand(drv, AS5047U_WRITE, data);
 }
 
 
-uint16_t as5047U_getData(uint8_t drv, uint32_t data)
+static uint16_t as5047U_getData(uint8_t drv, uint32_t data)
 {
 	uint8_t warning 	=  ((uint32_t)(data & 0x00800000)>>23);
 	uint8_t error 		=  ((uint32_t)(data & 0x00400000)>>22);
@@ -111,47 +141,6 @@ uint16_t as5047U_getData(uint8_t drv, uint32_t data)
 	return (uint16_t) ((data & 0x003FFF00)>>8);
 }
 
-
-
-uint32_t as5047U_sendCommand(uint8_t drv, uint8_t rw, uint16_t address)
-{
-	uint16_t data_send = 0;
-	uint32_t data_receive = 0;
-
-	uint8_t txData[3];
-	uint8_t rxData[3];
-
-	address &= 0x3FFF;
-
-	data_send = address | (rw<<14);
-
-
-	txData[0] = (uint8_t)( (data_send & 0xff00) >> 8);
-	txData[1] = (uint8_t)(data_send & 0x00ff) ;
-	txData[2] = gencrc(txData, 2);
-
-	// static char string2[50];
-	// uint16_t len = snprintf(string2, 50, "\n\rsend:   %x %x %x", txData[0], txData[1], txData[2]);
-	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string2, len);
-	// HAL_Delay(2);
-
-	spiMode_set(drv);
-	HAL_Delay(1);
-	swdriver_setCsnEncoder(drv, false);
-	HAL_SPI_TransmitReceive(swdriver[drv].SPI, txData, rxData, 3, HAL_MAX_DELAY);
-	swdriver_setCsnEncoder(drv, true);
-	HAL_Delay(1);
-	spiMode_reset(drv);
-
-	// len = snprintf(string2, 50, "\n\rrecv:   %x %x %x", rxData[0], rxData[1], rxData[2]);
-	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string2, len);
-	// HAL_Delay(2);
-
-
-	data_receive =  ((uint32_t)rxData[0]<<16) | ((uint32_t)rxData[1]<<8) | (uint32_t)rxData[2];
-
-	return data_receive;
-}
 
 
 
@@ -166,8 +155,6 @@ uint16_t as5047U_getAngle(uint8_t drv) //returns 16 bit value (with 14 bit resol
 	data_raw = as5047U_getData(drv, data_received);
 	return ((uint16_t)data_raw<<2);
 }
-
-
 
 
 uint16_t as5047U_getAngle_fast(uint8_t drv) //returns 16 bit value (with 14 bit resolution)
@@ -191,11 +178,6 @@ uint16_t as5047U_getAngle_fast(uint8_t drv) //returns 16 bit value (with 14 bit 
 	HAL_SPI_TransmitReceive(swdriver[drv].SPI, txData, rxData, 2, HAL_MAX_DELAY);
 	swdriver_setCsnEncoder(drv, true);
 
-	// static char string2[50];
-	// uint16_t len = snprintf(string2, 50, "\n\rrevc8:  %x %x", rxData[0], rxData[1]);
-	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string2, len);
-	// HAL_Delay(10);
-
 	spiMode_reset(drv);
 
 	return ((((((uint16_t)rxData[0]) & 0x3F) << 8 ) | rxData[1] ) << 2);
@@ -208,100 +190,10 @@ void as5047U_setABIResolution14Bit(uint8_t drv)
 {
 	uint32_t data_received = 0;
 
-	//uint16_t data_raw = 0;
-	// static char string2[50];
-	// uint16_t len;
-
-	// data_received = as5047U_sendCommand(drv, AS5047U_READ, ADDR_NV_SETTINGS3);
-	// data_received = as5047U_sendCommand(drv, AS5047U_READ, ADDR_NOP);
-	// data_raw = as5047U_getData(drv, data_received);
-
-	// len = snprintf(string2, 50, "\n\rABI-RES: %x", ((data_raw>>5)&0x7));
-	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string2, len);
-	// HAL_Delay(10);
-
 	data_received = as5047U_sendCommand(drv, AS5047U_WRITE, ADDR_NV_SETTINGS3);
 	as5047U_getData(drv, data_received);
 	data_received = as5047U_sendData(drv, 0b10000000);
 	data_received = as5047U_sendCommand(drv, AS5047U_READ, ADDR_NV_SETTINGS3);
 	data_received = as5047U_sendCommand(drv, AS5047U_READ, ADDR_NOP);
 	as5047U_getData(drv, data_received);
-
-	// len = snprintf(string2, 50, "\n\rABI-RES: %x", ((data_raw>>5)&0x7));
-	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string2, len);
-	// HAL_Delay(10);
 }
-
-
-// static void itob(int x, char *buf) // print uint8_t as binary
-// {
-//   unsigned char *ptr = (unsigned char *)&x;
-//   int pos = 0;
-//   for (int i = sizeof(uint8_t) - 1; i >= 0; i--)
-//     for (int j = CHAR_BIT - 1; j >= 0; j--)
-//       buf[pos++] = '0' + !!(ptr[i] & 1U << j);
-//   buf[pos] = '\0';
-// }
-
-// void as5047U_brutforce(uint8_t drv)
-// {
-// 	uint16_t i = 0;
-// 	uint32_t data = 0;
-//
-// 	for(i=0; i<=255; i++)
-// 	{
-// 		data = as5047U_sendCommand(drv, AS5047U_READ, ADDR_DIAG);
-// 		as5047U_getData(data);
-// 		HAL_Delay(2);
-// 	}
-// }
-
-
-
-// uint32_t as5047U_sendCommand2(uint8_t drv, uint8_t rw, uint16_t address)
-// {
-// 	uint16_t data_send = 0;
-// 	uint32_t data_receive = 0;
-//
-// 	uint8_t txData[3];
-// 	uint8_t rxData[3];
-//
-// 	address &= 0x3FFF;
-//
-// 	//data_send = address | (rw<<14) | (parity_calculate_even(address | (rw<<14))<<15);
-// 	data_send = address | (rw<<14);
-//
-// 	txData[0] = (uint8_t)(data_send >> 8);
-// 	txData[1] = (uint8_t)data_send;
-// 	txData[2] = gencrc(txData, 2);
-// 	//txData[2] = crc;
-//
-// 	// static char string1[50];
-// 	// static char string2[50];
-// 	// static char string3[50];
-// 	// static char string4[100];
-// 	// uint16_t len = 0;
-// 	// uint16_t len = snprintf(string2, 50, "\n\r\n\rsend:   %x %x %x", txData[0], txData[1], txData[2]);
-// 	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string2, len);
-// 	// HAL_Delay(2);
-//
-// 	spiMode_set(drv);
-// 	HAL_Delay(2);
-// 	swdriver_setCsnEncoder(drv, false);
-// 	HAL_SPI_Transmit(swdriver[drv].SPI, txData, 3, HAL_MAX_DELAY);
-// 	swdriver_setCsnEncoder(drv, true);
-// 	HAL_Delay(2);
-// 	spiMode_reset(drv);
-//
-// 	// itob(rxData[0], string1);
-// 	// itob(rxData[1], string2);
-// 	// itob(rxData[2], string3);
-//
-// 	// len = snprintf(string4, 100, "\n\r%s%s%s", string1, string2, string3);
-// 	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string4, len);
-// 	// HAL_Delay(2);
-//
-// 	data_receive =  ((uint32_t)rxData[0]<<16) | ((uint32_t)rxData[1]<<8) | (uint32_t)rxData[2];
-//
-// 	return data_receive;
-// }

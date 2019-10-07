@@ -3,7 +3,7 @@
 #include "stm32h7xx_hal.h"
 #include "swdriver.h"
 #include "usart.h"
-#include "as5147.h"
+#include "as5047U.h"
 
 //TODO: use functions from TMC4671.c, use masking
 void TMC4671_highLevel_init(uint8_t drv)
@@ -14,7 +14,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_MOTOR_TYPE_N_POLE_PAIRS, (3 << TMC4671_MOTOR_TYPE_SHIFT) | (7 << TMC4671_N_POLE_PAIRS_SHIFT)); // BLDC, 7 pole pairs
 	tmc4671_writeInt(drv, TMC4671_PWM_POLARITIES, 0); // LS and HS polarity off
 	tmc4671_writeInt(drv, TMC4671_PWM_MAXCNT, 3999); // 3999 --> 25kHz PWM
-	tmc4671_writeInt(drv, TMC4671_PWM_BBM_H_BBM_L, (20 << TMC4671_PWM_BBM_H_SHIFT) | (20 << TMC4671_PWM_BBM_L_SHIFT)); // LS and HS 100ns BBM
+	tmc4671_writeInt(drv, TMC4671_PWM_BBM_H_BBM_L, (25 << TMC4671_PWM_BBM_H_SHIFT) | (25 << TMC4671_PWM_BBM_L_SHIFT)); // LS and HS 100ns BBM
 	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, (0 << TMC4671_PWM_SV_SHIFT) | (7 << TMC4671_PWM_CHOP_SHIFT)); // Space Vector PWM disabled, centered PWM for FOC
 
 	// ADC configuration
@@ -56,7 +56,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 	// Limits
 	tmc4671_writeInt(drv, TMC4671_PIDOUT_UQ_UD_LIMITS, 23169); // UQ/UD limit TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET_DDT_LIMITS, 32767); // torque/flux ddt limit 10A TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 10000); // torque/flux limit 10A TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 5000); // torque/flux limit 10A TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_ACCELERATION_LIMIT, 1000000); // acceleration limit TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_LIMIT, 2000); // velocity limit TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_LOW, -16383); // position lower limit, -90°  TODO optimize
@@ -66,9 +66,9 @@ void TMC4671_highLevel_init(uint8_t drv)
 
 
 	// PI settings
-	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (120 << TMC4671_PID_FLUX_P_SHIFT) | (3000 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (120 << TMC4671_PID_TORQUE_P_SHIFT) | (3000 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (7000 << TMC4671_PID_VELOCITY_P_SHIFT) | (500 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (100 << TMC4671_PID_FLUX_P_SHIFT) | (2600 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (140 << TMC4671_PID_TORQUE_P_SHIFT) | (2900 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (8000 << TMC4671_PID_VELOCITY_P_SHIFT) | (500 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
 
 	// Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
@@ -164,8 +164,10 @@ void TMC4671_highLevel_printOffsetAngle(uint8_t drv)
 	HAL_Delay(1000);
 
 	char string[64];
-	uint16_t angle = as5147_getAngle(drv); // will be printed as int16!!!
-	uint16_t len = snprintf(string, 64, "\n\rdriver %d encoder zero angle: %d (11bit) %d (16bit)\n\r", drv, angle, (int16_t)(angle << 5));
+	// uint16_t angle = as5147_getAngle(drv); // will be printed as int16!!!
+	// uint16_t len = snprintf(string, 64, "\n\rdriver %d encoder zero angle: %d (11bit) %d (16bit)\n\r", drv, angle, (int16_t)(angle << 5));
+	uint16_t angle = as5047U_getAngle(drv); // will be printed as int16!!!
+	uint16_t len = snprintf(string, 64, "\n\rdriver %d encoder zero angle: %d (16bit)\n\r", drv, angle);
 	HAL_UART_Transmit(&huart3, (uint8_t*)string, len, 100000000);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
 }
@@ -204,12 +206,12 @@ void TMC4671_highLevel_initEncoder_new(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PHI_E_EXT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2500 << TMC4671_UD_EXT_SHIFT));
 	HAL_Delay(2000);
-	uint16_t angle = as5147_getAngle(drv);
+	uint16_t angle = as5047U_getAngle(drv);
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0);
 
-	int32_t position =  (int32_t)( (int16_t)( (angle<<5) - swdriver[drv].ofs_pos0)  );
+	int32_t position =  (int32_t)( (int16_t)( (angle) - swdriver[drv].ofs_pos0)  );
 	// static char string[128];
 	// uint16_t len = snprintf(string, 128, "-->driver %d encoder angle: %d (11bit) %d (16bit) %ld\n\r", drv, angle, (angle << 5), position );
 	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);

@@ -28,11 +28,6 @@
 #define ADDR_NV_ECC			  	0x001B
 
 
-uint32_t as5047U_sendCommand(uint8_t drv, uint8_t rw, uint16_t address);
-
-uint16_t as5047U_getData(uint8_t drv, uint32_t data);
-uint32_t as5047U_sendData(uint8_t drv, uint16_t data);
-
 uint16_t as5047U_getAngle(uint8_t drv);
 uint16_t as5047U_getAngle_fast(uint8_t drv);
 void as5047U_setABIResolution14Bit(uint8_t drv);

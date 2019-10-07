@@ -1,9 +1,9 @@
 #include "logic.h"
 #include "swdriver.h"
+#include "tmc6200/TMC6200.h"
 #include "tmc6200/TMC6200_highLevel.h"
 #include "tmc4671/TMC4671_highLevel.h"
 #include "as5047U.h"
-#include "as5147.h"
 #include "usart.h"
 #include "tim.h"
 #include <stdbool.h>
@@ -44,14 +44,15 @@ uint16_t angle[4];
 bool chirp = false;
 
 
-const char clear_string[7] = {27, '[', '2','J', 27, '[', 'H'};
+char clear_string[8] = {27, '[', '2','J', 27, '[', 'H', '\0'};
 
 
 void logic_init(void)
 {
 	uint8_t i;
 	static char string[500];
-	//static bool button_init=true;
+	static bool button_init=true;
+	uint16_t len = 0;
 
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 	HAL_Delay(500);
@@ -65,49 +66,32 @@ void logic_init(void)
 	for(i=0; i<4; i++) TMC4671_highLevel_init(i);
 	HAL_Delay(10);
 
-
-
-	as5047U_setABIResolution14Bit(0);
-	TMC4671_highLevel_initEncoder_new(0);
-	//TMC4671_highLevel_openLoopTest2(0);
-
+	for(i=0; i<4; i++) as5047U_setABIResolution14Bit(i);
 	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
 
-	HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
-	rx_byte_new = 0;
-	while( !(rx_byte_new && rx_byte == 's'))
-	{
-		angle[0] = as5147_getAngle(0);
-		angle[1] = as5047U_getAngle_fast(0);
-		angle[2] = as5047U_getAngle(0);
 
-		uint16_t len = snprintf(string, 500, "%senc[0] old: %5d\n\renc[0] new: %5d\n\renc[0] new: %5d",
-													  clear_string,	(angle[0] << 5), 	angle[1], angle[2]);
-		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
-		HAL_Delay(200);
-	} //TODO: do-while()
-	rx_byte_new = 0;
+	 HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
+	 rx_byte_new = 0;
+	 while( !(rx_byte_new && rx_byte == 's') && button_init == true)
+	 {
+	 	static uint16_t adcRaw0[4];
+	 	static uint16_t adcRaw1[4];
+	 	button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
+	 	//for(i=0; i<4; i++)	angle[i] = as5047U_getAngle(i);
+		angle[1] = as5047U_getAngle(1);
+		// angle[3] = as5047U_getAngle(3);
+	 	for(i=0; i<4; i++)	adcRaw0[i] = TMC4671_getAdcRaw0(i);
+	 	for(i=0; i<4; i++)	adcRaw1[i] = TMC4671_getAdcRaw1(i);
+	 	len = snprintf(string, 500, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d\tadcRaw1[0]: %5d\n\radcRaw0[1]: %5d\tadcRaw1[1]: %5d\n\radcRaw0[2]: %5d\tadcRaw1[2]: %5d\n\radcRaw0[3]: %5d\tadcRaw1[3]: %5d",
+	 			clear_string, angle[0], angle[1], angle[2], angle[3], adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
+	 	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+	 	HAL_Delay(100);
+	 } //TODO: do-while()
+	 rx_byte_new = 0;
 
-	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
-	for(i=0; i<4; i++) 	TMC4671_highLevel_pwmOff(i);
-
-
-	// HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
-	// rx_byte_new = 0;
-	// while( !(rx_byte_new && rx_byte == 's') && button_init == true)
-	// {
-	// 	static uint16_t adcRaw0[4];
-	// 	static uint16_t adcRaw1[4];
-	// 	button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
-	// 	for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
-	// 	for(i=0; i<4; i++)	adcRaw0[i] = TMC4671_getAdcRaw0(i);
-	// 	for(i=0; i<4; i++)	adcRaw1[i] = TMC4671_getAdcRaw1(i);
-	// 	uint16_t len = snprintf(string, 500, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d\tadcRaw1[0]: %5d\n\radcRaw0[1]: %5d\tadcRaw1[1]: %5d\n\radcRaw0[2]: %5d\tadcRaw1[2]: %5d\n\radcRaw0[3]: %5d\tadcRaw1[3]: %5d",
-	// 										clear_string, (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5), adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
-	// 	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
-	// 	HAL_Delay(200);
-	// } //TODO: do-while()
-	// rx_byte_new = 0;
+	 TMC4671_highLevel_initEncoder_new(1);
+	 TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
+		TMC4671_highLevel_positionMode_rampToZero(1);
 
 
 	// // initialize left wing
@@ -148,8 +132,8 @@ void logic_init(void)
 	//for(i=0; i<4; i++)	TMC4671_highLevel_setIntegralPosition(i, 20);
 
 	// HAL_Delay(5000);
-	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
-	for(i=0; i<4; i++) 	TMC4671_highLevel_pwmOff(i);
+	//for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
+	//for(i=0; i<4; i++) 	TMC4671_highLevel_pwmOff(i);
 
 	// for(i=0; i<4; i++)  TMC4671_highLevel_positionMode2(i);
 }
@@ -188,7 +172,7 @@ void logic_loop(void)
 				break;
 
 			case 'c':
-				for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 30000);
+				for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 15000);
 				break;
 
 			case 'i':
@@ -306,18 +290,16 @@ void logic_loop(void)
 		systick_counter_2 = 0;
 		static char string[1000];
 		// -------------------------------------------------------------------------
-		// uint16_t angle0 = as5147_getAngle(0);
-		// uint16_t angle1 = as5147_getAngle(1);
-		// uint16_t len = snprintf(string, 128, "dr %d: enc11= %d enc16=%d\tdr %d: enc11= %d enc16=%d\n\r", 0, angle0, (angle0 << 5), 1, angle1, (angle1 << 5));
+		// uint16_t angle0 = as5047U_getAngle(0);
+		// uint16_t angle1 = as5047U_getAngle(1);
+		// uint16_t len = snprintf(string, 128, "dr %d: enc11= %d enc16=%d\tdr %d: enc11= %d enc16=%d\n\r", 0, angle0, (angle0), 1, angle1, (angle1));
 		// -------------------------------------------------------------------------
-		// uint16_t angle0 = as5147_getAngle(0);
-		//uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (11bit) %d (16bit)\n\r", 0, angle0, ((uint16_t)angle0 << 5));
+		// uint16_t angle0 = as5047U_getAngle(0);
+		//uint16_t len = snprintf(string, 128, "driver %d encoder angle: %d (16bit)\n\r", 0,  angle0);
 		// -------------------------------------------------------------------------
-		// uint16_t len = snprintf(string, 128, "(uint16_t)%d\t(int16_t)%d\t%d\t%d\t%d\n\r", ((uint16_t)angle << 5),(int16_t)(angle << 5), DRV0_OFFSET_ENC_PHIM, DRV0_OFFSET_ENC_PHIE, DRV0_OFFSET_PHIM_PHIE);
+		//uint16_t len = snprintf(string, 128, "%d\t%d\t%d\t%d\n\r", tmc6200_readInt(0, 0x01), tmc6200_readInt(1, 0x01), tmc6200_readInt(2, 0x01), tmc6200_readInt(3, 0x01));
 		// -------------------------------------------------------------------------
-		// uint16_t len = snprintf(string, 128, "%d\n\r", tmc6200_readInt(1, 0x01));
-		// -------------------------------------------------------------------------
-		for(i=0; i<4; i++)	angle[i] = as5147_getAngle(i);
+		for(i=1; i<2; i++)	angle[i] = as5047U_getAngle(i);
 		uint16_t len = snprintf(string, 1000,
 			"%s%s%s%s%s"
 			"pwm_in:     %d %d %d %d\r\n"
@@ -329,7 +311,8 @@ void logic_loop(void)
 			"[o] ... stopped mode\n\r[p] ... position mode\n\r[SPACE] ... STOP\n\r\n\r", clear_string,
 			TMC4671_highLevel_getStatus(0), TMC4671_highLevel_getStatus(1), TMC4671_highLevel_getStatus(2), TMC4671_highLevel_getStatus(3),
 			pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3], angleIn[0], angleIn[1], angleIn[2], angleIn[3],
-			angleOut[0], angleOut[1], angleOut[2], angleOut[3], (angle[0] << 5), (angle[1] << 5), (angle[2] << 5), (angle[3] << 5));
+			angleOut[0], angleOut[1], angleOut[2], angleOut[3], (angle[0]), (angle[1]), (angle[2]), (angle[3]));
+
 			//uint16_t len = snprintf(string, 1000,"%d;%ld;%ld\n\r", pwm_in[1], TMC4671_highLevel_getPositionTarget(1), TMC4671_highLevel_getPositionActual(1));
 		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	} // end of: if(systick_counter_2 >= 200) //5Hz
