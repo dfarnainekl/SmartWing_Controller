@@ -5,7 +5,7 @@
 
 #define ANGLE_MAX_ALPHA_DEGREE 	20.0
 
-typedef enum {AIL, FLP} MODE;
+typedef enum {AIL, FLP, JMP_AIL, JMP_FLP} MODE;
 
 typedef struct sweep_s
 {
