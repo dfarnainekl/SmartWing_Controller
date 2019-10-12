@@ -25,7 +25,8 @@ typedef struct data_s
 {
 	int32_t	posTarget[4];
 	int32_t	posActual[4];
-
+	int16_t torqueActual[4];
+	int16_t velocityActual[4];
 } data_t;
 
 

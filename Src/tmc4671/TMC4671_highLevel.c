@@ -271,11 +271,11 @@ void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0);
 }
 
-void TMC4671_highLevel_togglePositionFilter(uint8_t drv)
+void TMC4671_highLevel_setPositionFilter(uint8_t drv, bool status)
 {
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
-	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, !enabled);
+	//bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, status);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0);
 }
 
@@ -297,6 +297,20 @@ int32_t TMC4671_highLevel_getPositionTarget(uint8_t drv)
 int32_t TMC4671_highLevel_getPositionActual(uint8_t drv)
 {
 	return tmc4671_readInt(drv, TMC4671_PID_POSITION_ACTUAL);
+}
+
+int16_t TMC4671_highLevel_getTorqueActual(uint8_t drv)
+{
+	return tmc4671_readRegister16BitValue(drv,TMC4671_PID_TORQUE_FLUX_ACTUAL, BIT_16_TO_31);
+}
+
+int16_t TMC4671_highLevel_getVelocityActual(uint8_t drv)
+{
+	// tmc4671_writeInt(drv, TMC4671_INTERIM_ADDR, 24);
+	// INTERIM_ADDR
+	//  INTERIM_DATA
+	// return tmc4671_readRegister16BitValue(drv,TMC4671_PID_VELOCITY_ACTUAL_LSB, BIT_0_TO_15);
+	return (int16_t) tmc4671_readInt(drv, TMC4671_PID_VELOCITY_ACTUAL);
 }
 
 char* TMC4671_highLevel_getStatus(uint8_t drv)

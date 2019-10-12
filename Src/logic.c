@@ -44,6 +44,7 @@ uint16_t angle[4];
 bool chirp = false;
 bool stats = true;
 bool integral = false;
+bool current = false;
 
 char clear_string[8] = {27, '[', '2','J', 27, '[', 'H', '\0'};
 
@@ -83,9 +84,11 @@ void logic_init(void)
 		// angle[3] = as5047U_getAngle(3);
 	 	for(i=0; i<4; i++)	adcRaw0[i] = TMC4671_getAdcRaw0(i);
 	 	for(i=0; i<4; i++)	adcRaw1[i] = TMC4671_getAdcRaw1(i);
-	 	len = snprintf(string, 500, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d\tadcRaw1[0]: %5d\n\radcRaw0[1]: %5d\tadcRaw1[1]: %5d\n\radcRaw0[2]: %5d\tadcRaw1[2]: %5d\n\radcRaw0[3]: %5d\tadcRaw1[3]: %5d",
-	 			clear_string, angle[0], angle[1], angle[2], angle[3], adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
-	 	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+	 	//len = snprintf(string, 500, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d\tadcRaw1[0]: %5d\n\radcRaw0[1]: %5d\tadcRaw1[1]: %5d\n\radcRaw0[2]: %5d\tadcRaw1[2]: %5d\n\radcRaw0[3]: %5d\tadcRaw1[3]: %5d",
+	 	//		clear_string, angle[0], angle[1], angle[2], angle[3], adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
+	 	len = snprintf(string, 128, "%d\t%d\t%d\t%d\n\r", tmc6200_readInt(0, 0x01), tmc6200_readInt(1, 0x01), tmc6200_readInt(2, 0x01), tmc6200_readInt(3, 0x01));
+
+		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	 	HAL_Delay(100);
 	 } //TODO: do-while()
 	 rx_byte_new = 0;
@@ -126,6 +129,7 @@ void logic_init(void)
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 
+	for(i=0; i<4; i++)	TMC4671_highLevel_setPositionFilter(i, false);
 	//for(i=0; i<4; i++)	TMC4671_highLevel_setIntegralPosition(i, 20);
 
 	// HAL_Delay(5000);
@@ -165,11 +169,20 @@ void logic_loop(void)
 				break;
 
 			case 'f':
-				for(i=0; i<4; i++)	TMC4671_highLevel_togglePositionFilter(i);
+				for(i=0; i<4; i++)	TMC4671_highLevel_setPositionFilter(i, true);
 				break;
 
 			case 'c':
-				for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 15000);
+				if(current)
+				{
+					for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 5000);
+					current = false;
+				}
+				else
+				{
+					for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 15000);
+					current = true;
+				}
 				break;
 
 			case 'i':
@@ -252,15 +265,17 @@ void logic_loop(void)
 
 
 			case 'l': // print data
-				sweep.len = snprintf(sweep.string,200,"%s", clear_string);
+				sweep.len = snprintf(sweep.string,300,"%s", clear_string);
 				HAL_UART_Transmit_IT(&huart3, (uint8_t*)sweep.string, sweep.len);
 				for(i=0; i<SWEEP_N; i++)
 				{
 					HAL_Delay(1);
 					//static char string[100];
-					sweep.len = snprintf(sweep.string, 200,"%d;%ld;%ld;%ld;%ld;%ld;%ld;%ld;%ld\n\r", i,
+					sweep.len = snprintf(sweep.string, 200,"%d;%ld;%ld;%ld;%ld;%ld;%ld;%ld;%ld;%d;%d;%d;%d;%d;%d;%d;%d\n\r", i,
 					data[i].posTarget[0], data[i].posTarget[1], data[i].posTarget[2], data[i].posTarget[3],
-					data[i].posActual[0],	data[i].posActual[1], data[i].posActual[2], data[i].posActual[3]);
+					data[i].posActual[0],	data[i].posActual[1], data[i].posActual[2], data[i].posActual[3],
+					data[i].torqueActual[0], data[i].torqueActual[1], data[i].torqueActual[2], data[i].torqueActual[3],
+					data[i].velocityActual[0],	data[i].velocityActual[1], data[i].velocityActual[2], data[i].velocityActual[3]);
 					HAL_UART_Transmit_IT(&huart3, (uint8_t*)sweep.string, sweep.len);
 				}
 				break;
@@ -344,6 +359,8 @@ void logic_loop(void)
 		for(i=0; i<4; i++) 	TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
 		for(i=0; i<4; i++) data[sweep.k].posTarget[i] = positionTarget[i];
 		for(i=0; i<4; i++) data[sweep.k].posActual[i] = TMC4671_highLevel_getPositionActual(i);
+		for(i=0; i<4; i++) data[sweep.k].torqueActual[i] = TMC4671_highLevel_getTorqueActual(i);
+		for(i=0; i<4; i++) data[sweep.k].velocityActual[i] = TMC4671_highLevel_getVelocityActual(i);
 		if(sweep.k >= sweep.N-1)
 		{
 			chirp = false;
