@@ -13,18 +13,18 @@
 #define SWEEP_TA	0.003
 #define SWEEP_N		10240
 
+
 sweep_t sweep = {	.Ta = SWEEP_TA,
 									.N = SWEEP_N,
 									.U = 1,
 									.omegaStart = 2*M_PI*1,
-									.omegaEnd = 2*M_PI*10,
+									.omegaEnd = 2*M_PI*50,
 									.k = 0,
 									.mode = AIL
 								};
 
-__attribute__((section(".ram_d1"))) data_t data[SWEEP_N];
-
-
+__attribute__((section(".ram_d1"))) data1_t data1[SWEEP_N] = {0};
+__attribute__((section(".ram_d2"))) data2_t data2[SWEEP_N] = {0};
 
 volatile uint16_t systick_counter = 0;
 volatile uint16_t systick_counter_2 = 0;
@@ -43,7 +43,7 @@ uint16_t angle[4];
 
 bool chirp = false;
 bool stats = true;
-bool integral = false;
+uint8_t integral = 0;
 bool current = false;
 
 char clear_string[8] = {27, '[', '2','J', 27, '[', 'H', '\0'};
@@ -68,7 +68,7 @@ void logic_init(void)
 	for(i=0; i<4; i++) TMC4671_highLevel_init(i);
 	HAL_Delay(10);
 
-	for(i=0; i<4; i++) as5047U_setABIResolution14Bit(i);
+	for(i=0; i<4; i++) as5047U_setABIResolution14Bit(i); //FIXME
 	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
 
 
@@ -79,32 +79,31 @@ void logic_init(void)
 	 	static uint16_t adcRaw0[4];
 	 	static uint16_t adcRaw1[4];
 	 	button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
-	 	for(i=0; i<4; i++)	angle[i] = as5047U_getAngle(i);
+	 	for(i=0; i<4; i++)	angle[i] = as5047U_getAngle(i); //FIXME
 		//angle[1] = as5047U_getAngle(1);
 		// angle[3] = as5047U_getAngle(3);
 	 	for(i=0; i<4; i++)	adcRaw0[i] = TMC4671_getAdcRaw0(i);
 	 	for(i=0; i<4; i++)	adcRaw1[i] = TMC4671_getAdcRaw1(i);
-	 	//len = snprintf(string, 500, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d\tadcRaw1[0]: %5d\n\radcRaw0[1]: %5d\tadcRaw1[1]: %5d\n\radcRaw0[2]: %5d\tadcRaw1[2]: %5d\n\radcRaw0[3]: %5d\tadcRaw1[3]: %5d",
-	 	//		clear_string, angle[0], angle[1], angle[2], angle[3], adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
-	 	len = snprintf(string, 128, "%d\t%d\t%d\t%d\n\r", tmc6200_readInt(0, 0x01), tmc6200_readInt(1, 0x01), tmc6200_readInt(2, 0x01), tmc6200_readInt(3, 0x01));
-
+	 	len = snprintf(string, 500, "%senc[0]: %5d\tenc[1]: %5d\tenc[2]: %5d\tenc[3]: %5d \n\radcRaw0[0]: %5d\tadcRaw1[0]: %5d\n\radcRaw0[1]: %5d\tadcRaw1[1]: %5d\n\radcRaw0[2]: %5d\tadcRaw1[2]: %5d\n\radcRaw0[3]: %5d\tadcRaw1[3]: %5d",
+	 			clear_string, angle[0], angle[1], angle[2], angle[3], adcRaw0[0], adcRaw1[0], adcRaw0[1], adcRaw1[1], adcRaw0[2], adcRaw1[2], adcRaw0[3], adcRaw1[3]);
+	 	//len = snprintf(string, 128, "%d\t%d\t%d\t%d\n\r", tmc6200_readInt(0, 0x01), tmc6200_readInt(1, 0x01), tmc6200_readInt(2, 0x01), tmc6200_readInt(3, 0x01));
 		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	 	HAL_Delay(100);
 	 } //TODO: do-while()
 	 rx_byte_new = 0;
 
 
-	// initialize left wing
-	TMC4671_highLevel_initEncoder_new(0);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
-	TMC4671_highLevel_positionMode_rampToZero(0);
-	TMC4671_highLevel_stoppedMode(0);
-	HAL_Delay(100);
-	TMC4671_highLevel_initEncoder_new(1);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
-	TMC4671_highLevel_positionMode_rampToZero(1);
-	TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
-	TMC4671_highLevel_positionMode_rampToZero(0);
+	// // initialize left wing
+	// TMC4671_highLevel_initEncoder_new(0);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
+	// TMC4671_highLevel_positionMode_rampToZero(0);
+	// TMC4671_highLevel_stoppedMode(0);
+	// HAL_Delay(100);
+	// TMC4671_highLevel_initEncoder_new(1);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(1);
+	// TMC4671_highLevel_positionMode_rampToZero(1);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(0);
+	// TMC4671_highLevel_positionMode_rampToZero(0);
 
 	HAL_Delay(100);
 
@@ -186,15 +185,15 @@ void logic_loop(void)
 				break;
 
 			case 'i':
-				if(integral)
+				if(integral>=60)
 				{
 					for(i=0; i<4; i++)	TMC4671_highLevel_setIntegralPosition(i, 0);
-					integral = false;
+					integral = 0;
 				}
 				else
 				{
-					for(i=0; i<4; i++)	TMC4671_highLevel_setIntegralPosition(i, 40);
-					integral = true;
+					integral += 10;
+					for(i=0; i<4; i++)	TMC4671_highLevel_setIntegralPosition(i, integral);
 				}
 				break;
 
@@ -230,6 +229,7 @@ void logic_loop(void)
 				chirp = true;
 				systick_counter_3 = 0;
 				sweep.k = 0;
+				sweep.U = 5;
 				sweep.mode = AIL;
 				break;
 
@@ -237,15 +237,15 @@ void logic_loop(void)
 				chirp = true;
 				systick_counter_3 = 0;
 				sweep.k = 0;
-				sweep.U = 1;
+				sweep.U = 3;
 				sweep.mode = FLP;
 				break;
 
-			case '3': // testcase 3: jump flaps
+			case '3': // testcase 3: jump aileron
 				chirp = true;
 				systick_counter_3 = 0;
 				sweep.k = 0;
-				sweep.U = 3;
+				sweep.U = 5;
 				sweep.mode = JMP_AIL;
 				break;
 
@@ -265,17 +265,25 @@ void logic_loop(void)
 
 
 			case 'l': // print data
-				sweep.len = snprintf(sweep.string,300,"%s", clear_string);
+				sweep.len = snprintf(sweep.string,800,"%s", clear_string);
 				HAL_UART_Transmit_IT(&huart3, (uint8_t*)sweep.string, sweep.len);
-				for(i=0; i<SWEEP_N; i++)
+				uint32_t n = 0;
+				if(sweep.mode==JMP_FLP || sweep.mode==JMP_AIL)
+					n = 5000;
+				else
+					n = SWEEP_N;
+
+				for(i=0; i<n; i++)
 				{
-					HAL_Delay(1);
+					HAL_Delay(3);
 					//static char string[100];
-					sweep.len = snprintf(sweep.string, 200,"%d;%ld;%ld;%ld;%ld;%ld;%ld;%ld;%ld;%d;%d;%d;%d;%d;%d;%d;%d\n\r", i,
-					data[i].posTarget[0], data[i].posTarget[1], data[i].posTarget[2], data[i].posTarget[3],
-					data[i].posActual[0],	data[i].posActual[1], data[i].posActual[2], data[i].posActual[3],
-					data[i].torqueActual[0], data[i].torqueActual[1], data[i].torqueActual[2], data[i].torqueActual[3],
-					data[i].velocityActual[0],	data[i].velocityActual[1], data[i].velocityActual[2], data[i].velocityActual[3]);
+					sweep.len = snprintf(sweep.string, 800,"%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%d;%ld;%ld;%ld;%ld;%ld;%ld;%ld;%ld\n\r", i,
+					data2[i].torqueTarget[0], 	data2[i].torqueTarget[1], 	data2[i].torqueTarget[2], 	data2[i].torqueTarget[3],
+					data1[i].torqueActual[0], 	data1[i].torqueActual[1], 	data1[i].torqueActual[2], 	data1[i].torqueActual[3],
+					data2[i].velocityTarget[0],	data2[i].velocityTarget[1], data2[i].velocityTarget[2], data2[i].velocityTarget[3],
+					data1[i].velocityActual[0],	data1[i].velocityActual[1], data1[i].velocityActual[2], data1[i].velocityActual[3],
+					data1[i].posTarget[0], 			data1[i].posTarget[1], 			data1[i].posTarget[2], 			data1[i].posTarget[3],
+					data1[i].posActual[0],			data1[i].posActual[1], 			data1[i].posActual[2], 			data1[i].posActual[3]	);
 					HAL_UART_Transmit_IT(&huart3, (uint8_t*)sweep.string, sweep.len);
 				}
 				break;
@@ -322,7 +330,7 @@ void logic_loop(void)
 		}
 		else if (  sweep.mode == JMP_AIL  )
 		{
-				if(sweep.k < 2000 || sweep.k > 6000)
+				if(sweep.k < 1000 || sweep.k > 3000)
 				{
 					angleIn[0]= 0;
 					angleIn[1]= 0;
@@ -339,7 +347,7 @@ void logic_loop(void)
 		}
 		else if (  sweep.mode == JMP_FLP  )
 		{
-				if(sweep.k < 2000 || sweep.k > 6000)
+				if(sweep.k < 1000 || sweep.k > 3000)
 				{
 					angleIn[0]= 0;
 					angleIn[1]= 0;
@@ -357,11 +365,13 @@ void logic_loop(void)
 
 		for(i=0; i<4; i++)	positionTarget[i] = clacAngle(i, angleIn);
 		for(i=0; i<4; i++) 	TMC4671_highLevel_setPosition_nonBlocking(i, positionTarget[i]);
-		for(i=0; i<4; i++) data[sweep.k].posTarget[i] = positionTarget[i];
-		for(i=0; i<4; i++) data[sweep.k].posActual[i] = TMC4671_highLevel_getPositionActual(i);
-		for(i=0; i<4; i++) data[sweep.k].torqueActual[i] = TMC4671_highLevel_getTorqueActual(i);
-		for(i=0; i<4; i++) data[sweep.k].velocityActual[i] = TMC4671_highLevel_getVelocityActual(i);
-		if(sweep.k >= sweep.N-1)
+		for(i=0; i<4; i++) data1[sweep.k].posTarget[i] 			= positionTarget[i];
+		for(i=0; i<4; i++) data1[sweep.k].posActual[i] 			= TMC4671_highLevel_getPositionActual(i);
+		for(i=0; i<4; i++) data1[sweep.k].torqueActual[i] 	= TMC4671_highLevel_getTorqueActual(i);
+		for(i=0; i<4; i++) data1[sweep.k].velocityActual[i] = TMC4671_highLevel_getVelocityActual(i);
+		for(i=0; i<4; i++) data2[sweep.k].velocityTarget[i] = TMC4671_highLevel_getVelocityTarget(i);
+		for(i=0; i<4; i++) data2[sweep.k].torqueTarget[i] 	= TMC4671_highLevel_getTorqueActual(i);
+		if(sweep.k >= sweep.N-1 || ((sweep.mode==JMP_FLP || sweep.mode==JMP_AIL) && sweep.k>5000) )
 		{
 			chirp = false;
 			sweep.k = 0;
@@ -388,7 +398,7 @@ void logic_loop(void)
 		// -------------------------------------------------------------------------
 		//uint16_t len = snprintf(string, 128, "%d\t%d\t%d\t%d\n\r", tmc6200_readInt(0, 0x01), tmc6200_readInt(1, 0x01), tmc6200_readInt(2, 0x01), tmc6200_readInt(3, 0x01));
 		// -------------------------------------------------------------------------
-		for(i=1; i<2; i++)	angle[i] = as5047U_getAngle(i);
+		for(i=0; i<4; i++)	angle[i] = as5047U_getAngle(i);
 		uint16_t len = snprintf(string, 1000,
 			"%s%s%s%s%s"
 			"pwm_in:     %d %d %d %d\r\n"

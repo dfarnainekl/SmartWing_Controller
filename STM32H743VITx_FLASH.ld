@@ -154,6 +154,11 @@ SECTIONS
   *(.ram_d1*);
   } >RAM_D1
 
+  .ram_d2 :
+  {
+  *(.ram_d2*);
+  } >RAM_D2
+
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :

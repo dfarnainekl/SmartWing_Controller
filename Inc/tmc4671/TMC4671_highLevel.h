@@ -33,7 +33,9 @@ void TMC4671_highLevel_setIntegralPosition(uint8_t drv, uint16_t integral);
 char* TMC4671_highLevel_getStatus(uint8_t drv);
 
 //Get current values
+int16_t TMC4671_highLevel_getTorqueTarget(uint8_t drv);
 int16_t TMC4671_highLevel_getTorqueActual(uint8_t drv);
+int16_t TMC4671_highLevel_getVelocityTarget(uint8_t drv);
 int16_t TMC4671_highLevel_getVelocityActual(uint8_t drv);
 int32_t TMC4671_highLevel_getPositionTarget(uint8_t drv);
 int32_t TMC4671_highLevel_getPositionActual(uint8_t drv);

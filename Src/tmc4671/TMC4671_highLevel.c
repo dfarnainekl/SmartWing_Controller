@@ -71,36 +71,36 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (8000 << TMC4671_PID_VELOCITY_P_SHIFT) | (500 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
 
-	// Actual Velocity Biquad settings (lowpass 2nd order, f=500, d=1.0)
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 946788180);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 10); // biquad_v_a_2
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -417422437);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 12); // biquad_v_b_0
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 13); // biquad_v_b_1
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 3752585);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 14); // biquad_v_b_2
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 15); // biquad_v_enable
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
-
-
-	// // Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
+	// // Actual Velocity Biquad settings (lowpass 2nd order, f=500, d=1.0)
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1021092885);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 946788180);
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 10); // biquad_v_a_2
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -485512745);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -417422437);
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 12); // biquad_v_b_0
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 322693);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 13); // biquad_v_b_1
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 645386);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 3752585);
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 14); // biquad_v_b_2
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 322693);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 15); // biquad_v_enable
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
+
+
+	// Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1021092885);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 10); // biquad_v_a_2
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -485512745);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 12); // biquad_v_b_0
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 322693);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 13); // biquad_v_b_1
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 645386);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 14); // biquad_v_b_2
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 322693);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 15); // biquad_v_enable
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
 
 	// // Target Position Biquad settings (lowpass 2nd order, f=20, d=1.0)
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 1); // biquad_x_a_1
@@ -311,6 +311,20 @@ int16_t TMC4671_highLevel_getVelocityActual(uint8_t drv)
 	//  INTERIM_DATA
 	// return tmc4671_readRegister16BitValue(drv,TMC4671_PID_VELOCITY_ACTUAL_LSB, BIT_0_TO_15);
 	return (int16_t) tmc4671_readInt(drv, TMC4671_PID_VELOCITY_ACTUAL);
+}
+
+int16_t TMC4671_highLevel_getTorqueTarget(uint8_t drv)
+{
+	// INTERIM_ADDR = 0 => PIDIN_TARGET_TORQUE
+ tmc4671_writeInt(drv, TMC4671_INTERIM_ADDR, 0);
+ return (int16_t)tmc4671_readInt(drv, TMC4671_INTERIM_DATA);
+}
+
+int16_t TMC4671_highLevel_getVelocityTarget(uint8_t drv)
+{
+	// INTERIM_ADDR = 2 => PIDIN_TARGET_VELOCITY
+ tmc4671_writeInt(drv, TMC4671_INTERIM_ADDR, 2);
+ return (int16_t)tmc4671_readInt(drv, TMC4671_INTERIM_DATA);
 }
 
 char* TMC4671_highLevel_getStatus(uint8_t drv)

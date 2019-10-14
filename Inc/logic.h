@@ -21,15 +21,19 @@ typedef struct sweep_s
 } sweep_t;
 
 
-typedef struct data_s
+typedef struct data1_s
 {
 	int32_t	posTarget[4];
 	int32_t	posActual[4];
 	int16_t torqueActual[4];
 	int16_t velocityActual[4];
-} data_t;
+} data1_t;
 
-
+typedef struct data2_s
+{
+	int16_t torqueTarget[4];
+	int16_t velocityTarget[4];
+} data2_t;
 
 void logic_init(void);
 void logic_loop(void);

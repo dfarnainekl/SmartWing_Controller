@@ -119,8 +119,8 @@ static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 	else if((data16>>10)&0x01)
 		strcat (string,"CORDIC_Overflow\n\r");
 
-	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
-	HAL_Delay(100);
+	//HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
+	//HAL_Delay(100);
 }
 
 
