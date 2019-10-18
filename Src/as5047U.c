@@ -82,7 +82,7 @@ static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 	uint32_t data32 = 0;
 	uint16_t data16 = 0;
 
-	sprintf(string, "\n\r\n\r");
+	sprintf(string, "\n\n");
 
 	if(error)
 		strcat (string,"ERROR\t");
@@ -91,7 +91,7 @@ static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 
 
 
-	sprintf(string2, "drv %d\n\r", drv);
+	sprintf(string2, "drv %d\n", drv);
 	strcat (string,string2);
 
 	as5047U_sendCommand(drv, AS5047U_READ, ADDR_ERRFL);
@@ -99,28 +99,28 @@ static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 	data16 =(uint16_t) ((data32 & 0x003FFF00)>>8);
 
 	if((data16>>0)&0x01)
-		 strcat (string,"AGC-warning\n\r");
+		 strcat (string,"AGC-warning\n");
 	else if((data16>>1)&0x01)
-		strcat (string,"MagHalf\n\r");
+		strcat (string,"MagHalf\n");
 	else if((data16>>2)&0x01)
-		strcat (string,"P2ram_warning\n\r");
+		strcat (string,"P2ram_warning\n");
 	else if((data16>>3)&0x01)
-		strcat (string,"P2ram_error\n\r");
+		strcat (string,"P2ram_error\n");
 	else if((data16>>4)&0x01)
-		strcat (string,"Framing error\n\r");
+		strcat (string,"Framing error\n");
 	else if((data16>>5)&0x01)
-		strcat (string,"Command error\n\r");
+		strcat (string,"Command error\n");
 	else if((data16>>6)&0x01)
-		strcat (string,"CRC error\n\r");
+		strcat (string,"CRC error\n");
 	else if((data16>>7)&0x01)
-		strcat (string,"WDTST\n\r");
+		strcat (string,"WDTST\n");
 	else if((data16>>9)&0x01)
-		strcat (string,"OffCompNotFinished\n\r");
+		strcat (string,"OffCompNotFinished\n");
 	else if((data16>>10)&0x01)
-		strcat (string,"CORDIC_Overflow\n\r");
+		strcat (string,"CORDIC_Overflow\n");
 
-	//HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
-	//HAL_Delay(100);
+	 // HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
+	 // HAL_Delay(300);
 }
 
 

@@ -4,6 +4,8 @@
 #include "swdriver.h"
 #include "usart.h"
 #include "as5047U.h"
+#include <stdint.h>
+#include <string.h>
 
 //TODO: use functions from TMC4671.c, use masking
 void TMC4671_highLevel_init(uint8_t drv)
@@ -71,36 +73,36 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (8000 << TMC4671_PID_VELOCITY_P_SHIFT) | (500 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
 
-	// // Actual Velocity Biquad settings (lowpass 2nd order, f=500, d=1.0)
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 946788180);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 10); // biquad_v_a_2
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -417422437);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 12); // biquad_v_b_0
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 13); // biquad_v_b_1
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 3752585);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 14); // biquad_v_b_2
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 15); // biquad_v_enable
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
-
-
-	// Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
+	// Actual Velocity Biquad settings (lowpass 2nd order, f=500, d=1.0)
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1021092885);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 946788180);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 10); // biquad_v_a_2
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -485512745);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -417422437);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 12); // biquad_v_b_0
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 322693);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 13); // biquad_v_b_1
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 645386);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 3752585);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 14); // biquad_v_b_2
-	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 322693);
+	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 15); // biquad_v_enable
 	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
+
+
+	// // Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1021092885);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 10); // biquad_v_a_2
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -485512745);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 12); // biquad_v_b_0
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 322693);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 13); // biquad_v_b_1
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 645386);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 14); // biquad_v_b_2
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 322693);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 15); // biquad_v_enable
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
+	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
 
 	// // Target Position Biquad settings (lowpass 2nd order, f=20, d=1.0)
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 1); // biquad_x_a_1
@@ -137,6 +139,11 @@ void TMC4671_highLevel_init(uint8_t drv)
 void TMC4671_highLevel_pwmOff(uint8_t drv)
 {
 	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, 0x00000000); // PWM off
+}
+
+void TMC4671_highLevel_pwmOn(uint8_t drv)
+{
+	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, (0 << TMC4671_PWM_SV_SHIFT) | (7 << TMC4671_PWM_CHOP_SHIFT)); // Space Vector PWM disabled, centered PWM for FOC
 }
 
 void TMC4671_highLevel_stoppedMode(uint8_t drv)
@@ -181,9 +188,9 @@ void TMC4671_highLevel_printOffsetAngle(uint8_t drv)
 
 	char string[64];
 	// uint16_t angle = as5147_getAngle(drv); // will be printed as int16!!!
-	// uint16_t len = snprintf(string, 64, "\n\rdriver %d encoder zero angle: %d (11bit) %d (16bit)\n\r", drv, angle, (int16_t)(angle << 5));
+	// uint16_t len = snprintf(string, 64, "\ndriver %d encoder zero angle: %d (11bit) %d (16bit)\n", drv, angle, (int16_t)(angle << 5));
 	uint16_t angle = as5047U_getAngle(drv); // will be printed as int16!!!
-	uint16_t len = snprintf(string, 64, "\n\rdriver %d encoder zero angle: %d (16bit)\n\r", drv, angle);
+	uint16_t len = snprintf(string, 64, "\ndriver %d encoder zero angle: %d (16bit)\n", drv, angle);
 	HAL_UART_Transmit(&huart3, (uint8_t*)string, len, 100000000);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
 }
@@ -229,7 +236,7 @@ void TMC4671_highLevel_initEncoder_new(uint8_t drv)
 
 	int32_t position =  (int32_t)( (int16_t)( (angle) - swdriver[drv].ofs_pos0)  );
 	// static char string[128];
-	// uint16_t len = snprintf(string, 128, "-->driver %d encoder angle: %d (11bit) %d (16bit) %ld\n\r", drv, angle, (angle << 5), position );
+	// uint16_t len = snprintf(string, 128, "-->driver %d encoder angle: %d (11bit) %d (16bit) %ld\n", drv, angle, (angle << 5), position );
 	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 3); // phi_e_abn
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, position );
@@ -289,6 +296,22 @@ void TMC4671_highLevel_setIntegralPosition(uint8_t drv, uint16_t integral)
 	tmc4671_writeRegister16BitValue(drv, TMC4671_PID_POSITION_P_POSITION_I, BIT_0_TO_15, integral);
 }
 
+void TMC4671_highLevel_setIntegralVelocity(uint8_t drv, uint16_t integral)
+{
+	tmc4671_writeRegister16BitValue(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, BIT_0_TO_15, integral);
+}
+
+void TMC4671_highLevel_setProportionalPosition(uint8_t drv, uint16_t proportional)
+{
+	tmc4671_writeRegister16BitValue(drv, TMC4671_PID_POSITION_P_POSITION_I, BIT_16_TO_31, proportional);
+}
+
+void TMC4671_highLevel_setProportionalVelocity(uint8_t drv, uint16_t proportional)
+{
+	tmc4671_writeRegister16BitValue(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, BIT_16_TO_31, proportional);
+}
+
+
 int32_t TMC4671_highLevel_getPositionTarget(uint8_t drv)
 {
 	return tmc4671_readInt(drv, TMC4671_PID_POSITION_TARGET);
@@ -329,20 +352,35 @@ int16_t TMC4671_highLevel_getVelocityTarget(uint8_t drv)
 
 char* TMC4671_highLevel_getStatus(uint8_t drv)
 {
-	static char string[4][200];
+	static char string[4][500];
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
 	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
 	uint16_t torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
 	uint16_t position_i = tmc4671_readRegister16BitValue(drv, TMC4671_PID_POSITION_P_POSITION_I, BIT_0_TO_15);
-	snprintf(&string[drv][0], 200,
-		"Drive %d\n\r"
-		"Position-Filter [f]: %s\r\n"
-		"Torque-Limit    [c]: %d\r\n"
-		"Position-I:     [i]: %d\r\n"
-		"I0:                  %d\n\r"
-		"I1:                  %d\n\r"
-		"---------------------------\n\r",
-			drv, enabled?"on":"off", torque_flux_limit, position_i, tmc4671_getAdcI0Offset(drv),  tmc4671_getAdcI1Offset(drv));
+	uint16_t velocoty_i = tmc4671_readRegister16BitValue(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, BIT_0_TO_15);
+	int16_t position_p = tmc4671_readRegister16BitValue(drv, TMC4671_PID_POSITION_P_POSITION_I, BIT_16_TO_31);
+	uint16_t velocoty_p = tmc4671_readRegister16BitValue(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, BIT_16_TO_31);
+
+	snprintf(&string[drv][0], 500, 	"Drive %d\n", drv);
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Position-Filter [f]: %s\n",  enabled?"on":"off");
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Torque-Limit    [c]: %d\n",  torque_flux_limit);
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Velocity-P:   [g,t]: %d\n",  velocoty_p);
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Velocity-I:   [j,u]: %d\n",  velocoty_i);
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Position-P:   [h,z]: %d\n",  position_p);
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Position-I:   [k,i]: %d\n",  position_i);
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "I0:                  %d\n",  tmc4671_getAdcI0Offset(drv));
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "I1:                  %d\n",  tmc4671_getAdcI1Offset(drv));
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "---------------------------\n");
+	// snprintf(&string[drv][0], 300,
+	// 	"Drive %d\n"
+	// 	"Position-Filter [f]: %s\n"
+	// 	"Torque-Limit    [c]: %d\n"
+	// 	"Velocity-I:     [u]: %d\n"
+	// 	"Position-I:     [i]: %d\n"
+	// 	"I0:                  %d\n"
+	// 	"I1:                  %d\n"
+	// 	"---------------------------\n",
+	// 		drv, enabled?"on":"off", torque_flux_limit, velocoty_i, position_i, tmc4671_getAdcI0Offset(drv),  tmc4671_getAdcI1Offset(drv));
 
 	return &string[drv][0];
 }

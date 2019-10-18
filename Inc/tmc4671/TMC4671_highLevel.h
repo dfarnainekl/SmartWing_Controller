@@ -8,6 +8,7 @@
 void TMC4671_highLevel_init(uint8_t drv);
 
 void TMC4671_highLevel_pwmOff(uint8_t drv);
+void TMC4671_highLevel_pwmOn(uint8_t drv);
 void TMC4671_highLevel_stoppedMode(uint8_t drv);
 void TMC4671_highLevel_positionMode(uint8_t drv);
 void TMC4671_highLevel_positionMode_fluxTorqueRamp(uint8_t drv);
@@ -28,7 +29,10 @@ void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv);
 //set control parameters
 void TMC4671_highLevel_setPositionFilter(uint8_t drv, bool status);
 void TMC4671_highLevel_setCurrentLimit(uint8_t drv, uint16_t torque_flux_limit);
+void TMC4671_highLevel_setProportionalPosition(uint8_t drv, uint16_t proportional);
 void TMC4671_highLevel_setIntegralPosition(uint8_t drv, uint16_t integral);
+void TMC4671_highLevel_setProportionalVelocity(uint8_t drv, uint16_t proportional);
+void TMC4671_highLevel_setIntegralVelocity(uint8_t drv, uint16_t integral);
 
 char* TMC4671_highLevel_getStatus(uint8_t drv);
 
