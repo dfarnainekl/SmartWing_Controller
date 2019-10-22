@@ -14,7 +14,7 @@ static void spiMode_set(uint8_t drv)
 	{
 		_Error_Handler(__FILE__, __LINE__);
 	}
-	HAL_Delay(2);
+	//HAL_Delay(2);
 }
 
 static void spiMode_reset(uint8_t drv)
@@ -26,7 +26,7 @@ static void spiMode_reset(uint8_t drv)
 	{
 		_Error_Handler(__FILE__, __LINE__);
 	}
-	HAL_Delay(2);
+	//HAL_Delay(2);
 }
 
 static uint8_t gencrc(uint8_t *data, uint8_t len)
@@ -63,11 +63,11 @@ static uint32_t as5047U_sendCommand(uint8_t drv, uint8_t rw, uint16_t address)
 	txData[2] = gencrc(txData, 2);
 
 	spiMode_set(drv);
-	HAL_Delay(1);
+	//HAL_Delay(1);
 	swdriver_setCsnEncoder(drv, false);
 	HAL_SPI_TransmitReceive(swdriver[drv].SPI, txData, rxData, 3, HAL_MAX_DELAY);
 	swdriver_setCsnEncoder(drv, true);
-	HAL_Delay(1);
+	//HAL_Delay(1);
 	spiMode_reset(drv);
 
 	data_receive =  ((uint32_t)rxData[0]<<16) | ((uint32_t)rxData[1]<<8) | (uint32_t)rxData[2];
@@ -119,8 +119,8 @@ static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 	else if((data16>>10)&0x01)
 		strcat (string,"CORDIC_Overflow\n");
 
-	 // HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
-	 // HAL_Delay(300);
+	  // HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
+	  // HAL_Delay(300);
 }
 
 
@@ -156,6 +156,17 @@ uint16_t as5047U_getAngle(uint8_t drv) //returns 16 bit value (with 14 bit resol
 	return ((uint16_t)data_raw<<2);
 }
 
+int16_t as5047U_getVelocity(uint8_t drv) //returns 16 bit value (with 14 bit resolution)
+{
+	uint32_t data_received = 0;
+	uint16_t data_raw = 0;
+	data_received = as5047U_sendCommand(drv, AS5047U_READ, ADDR_VEL);
+	data_raw = as5047U_getData(drv, data_received);
+	data_received = as5047U_sendCommand(drv, AS5047U_READ, ADDR_NOP);
+	data_raw = as5047U_getData(drv, data_received);
+	return ((int16_t)(data_raw<<2)/4);
+}
+
 
 uint16_t as5047U_getAngle_fast(uint8_t drv) //returns 16 bit value (with 14 bit resolution)
 {
@@ -168,7 +179,7 @@ uint16_t as5047U_getAngle_fast(uint8_t drv) //returns 16 bit value (with 14 bit 
 	swdriver_setCsnEncoder(drv, false);
 	HAL_SPI_Transmit(swdriver[drv].SPI, txData, 2, HAL_MAX_DELAY);
 	swdriver_setCsnEncoder(drv, true);
-	HAL_Delay(2);
+	//HAL_Delay(2);
 
 	txData[0] = 0;
 	txData[1] = 0;

@@ -22,7 +22,7 @@ uint16_t TMC4671_getAdcRaw1(uint8_t drv);
 void TMC4671_highLevel_initEncoder(uint8_t drv);
 
 void TMC4671_highLevel_initEncoder_new(uint8_t drv);
-void TMC4671_highLevel_openLoopTest2(uint8_t drv);
+void TMC4671_highLevel_openLoopTest2(uint8_t drv, int32_t velocity);
 void TMC4671_highLevel_positionMode2(uint8_t drv);
 void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv);
 

@@ -30,6 +30,8 @@
 
 uint16_t as5047U_getAngle(uint8_t drv);
 uint16_t as5047U_getAngle_fast(uint8_t drv);
+int16_t as5047U_getVelocity(uint8_t drv);
+
 void as5047U_setABIResolution14Bit(uint8_t drv);
 
 

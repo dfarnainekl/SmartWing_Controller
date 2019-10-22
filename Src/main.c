@@ -101,7 +101,7 @@ int main(void)
   MX_GPIO_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
-  MX_I2C1_Init();
+  //MX_I2C1_Init();
   MX_I2C3_Init();
   MX_I2C4_Init();
   MX_SPI1_Init();
