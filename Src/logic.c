@@ -12,9 +12,11 @@
 #include <string.h>
 
 #define TA				0.001
-#define DATA_N		1024
+// #define DATA_N		1024
+// #define DATA_N		4096
+#define DATA_N		8192
 
-#define MATLAB 0
+#define MATLAB 1
 
 #define MODE_STOP								0
 #define MODE_TORQUE							1
@@ -129,9 +131,9 @@ void logic_init(void)
 	 // while(1);
 
 	motor_control[2].velocityP = 10;
-	motor_control[2].velocityI = 10;
+	motor_control[2].velocityI = 20;
 
-	motor_control[2].positionP = 0.5;
+	motor_control[2].positionP = 0.01;
 	motor_control[2].positionI = 0;
 
 	// initialize right wing
@@ -237,10 +239,9 @@ void logic_loop(void)
 			case '2':
 				mode = MODE_VELOCITY;
 				stats = false;
-				motor_data[2].velocityTarget = 1000;
 				motor_data[2].torqueTarget = 0;
 				motor_control[2].velocityIntegratorValue = 0;
-				motor_control[2].velocityIntegratorLimit = 5000;
+				motor_control[2].velocityIntegratorLimit = 15000;
 				tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
 				break;
 
@@ -251,9 +252,9 @@ void logic_loop(void)
 				motor_data[2].torqueTarget = 0;
 				motor_data[2].velocityTarget = 0;
 				motor_control[2].velocityIntegratorValue = 0;
-				motor_control[2].velocityIntegratorLimit = 5000;
+				motor_control[2].velocityIntegratorLimit = 15000;
 				motor_control[2].positionIntegratorValue = 0;
-				motor_control[2].positionIntegratorLimit = 10000;
+				motor_control[2].positionIntegratorLimit = 50000;
 				tmc4671_writeInt(2, TMC4671_PID_POSITION_ACTUAL, 0 );
 				tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
 				break;
@@ -279,23 +280,25 @@ void logic_loop(void)
 				mode = MODE_VELOCITY_STEP;
 				stats = false;
 				sweep.k = 0;
+				sweep.U = motor_data[2].velocityTarget;
 				motor_data[2].velocityTarget = 0;
 				motor_data[2].torqueTarget = 0;
-				sweep.U = 2000;
+
 				motor_control[2].velocityIntegratorValue = 0;
-				motor_control[2].velocityIntegratorLimit = 5000;
+				motor_control[2].velocityIntegratorLimit = 15000;
+				tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
 				tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
 				break;
 
 			case '+':
 				//motor_data[2].torqueTarget += 500;
-				//motor_data[2].velocityTarget += 200;
+				motor_data[2].velocityTarget += 100;
 				motor_data[2].positionTarget += 20000;
 				break;
 
 			case '-':
 				//motor_data[2].torqueTarget -= 500;
-				//motor_data[2].velocityTarget -= 200;
+				motor_data[2].velocityTarget -= 100;
 				motor_data[2].positionTarget -= 20000;
 				break;
 
@@ -372,19 +375,19 @@ void logic_loop(void)
 				//snprintf(string+strlen(string), 1500, "%s",  TMC4671_highLevel_getStatus(0));
 				//snprintf(string+strlen(string), 1500, "%s",  TMC4671_highLevel_getStatus(1));
 				snprintf(string+strlen(string), 1500, "%s",  TMC4671_highLevel_getStatus(2));
+				snprintf(string+strlen(string), 1500, "Torque Target    %ld\n",  motor_data[2].torqueTarget);
+				snprintf(string+strlen(string), 1500, "Velocity Target  %ld\n",  motor_data[2].velocityTarget);
+				snprintf(string+strlen(string), 1500, "Positoin Target  %ld\n",  motor_data[2].positionTarget);
+				snprintf(string+strlen(string), 1500, "Velocity IntLimit   %ld\n",  motor_control[2].velocityIntegratorLimit);
 				snprintf(string+strlen(string), 1500, "Velocity P %.1f\n",  motor_control[2].velocityP);
 				snprintf(string+strlen(string), 1500, "Velocity I %.1f\n",  motor_control[2].velocityI);
 				snprintf(string+strlen(string), 1500, "Position P %.1f\n",  motor_control[2].positionP);
 				snprintf(string+strlen(string), 1500, "Positino I %.1f\n",  motor_control[2].positionI);
-				//snprintf(string+strlen(string), 1500, "%s",  TMC4671_highLevel_getStatus(3));
-				// snprintf(string+strlen(string), 1500, "pwm_in:     %d %d %d %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
-				// snprintf(string+strlen(string), 1500, "angleIn:    % 2.1f % 2.1f % 2.1f % 2.1f\n", angleIn[0], angleIn[1], angleIn[2], angleIn[3]);
-				// snprintf(string+strlen(string), 1500, "angleOut:   % 2.1f % 2.1f % 2.1f % 2.1f\n", angleOut[0], angleOut[1], angleOut[2], angleOut[3]);
 				snprintf(string+strlen(string), 1500, "---------------------------\n");
 				snprintf(string+strlen(string), 1500, "enc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n", angle[0], angle[1], angle[2], angle[3]);
 				snprintf(string+strlen(string), 1500, "---------------------------\n");
 				snprintf(string+strlen(string), 1500, "[o] ... stopped mode\n[p] ... position mode\n[SPACE] ... STOP\n");
-				snprintf(string+strlen(string), 1500, "fin\n");
+				snprintf(string+strlen(string), 1500, "finstats\n");
 				HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
 				break;
 
@@ -403,14 +406,17 @@ if(systick_counter) //1ms
 
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
 
- 	//motor_data[2].SensorPos = as5047U_getAngle_fast(2);
+	// motor_data[2].positionActual = as5047U_getAngle_fast(2);
 	// motor_data[2].SensorPos = as5047U_getAngle(2);
 	// motor_data[2].SensorVel = as5047U_getVelocity(2);
 
-	motor_data[2].torqueActual = tmc4671_getActualTorque_raw(2);
-	motor_data[2].positionActual = tmc4671_getActualPosition(2);
-	motor_data[2].velocityActual = tmc4671_getActualVelocity(2);
 
+	if(mode != MODE_CHIRP_TORQUE)
+	{
+		motor_data[2].torqueActual = tmc4671_getActualTorque_raw(2);
+		motor_data[2].velocityActual = tmc4671_getActualVelocity(2);
+		motor_data[2].positionActual = tmc4671_getActualPosition(2);
+	}
 
 	if(mode == MODE_STOP)
 	{
@@ -448,14 +454,15 @@ if(systick_counter) //1ms
 			}
 		}
 
+		data1[sweep.k].torqueTarget[2] 	= motor_data[2].torqueTarget;
 
 		velocityPI();
 
 		tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
 
-		if(mode == MODE_VELOCITY_STEP)
+		if(mode == MODE_VELOCITY_STEP || mode == MODE_STOP)
 		{
-			data1[sweep.k].torqueTarget[2] 	= motor_data[2].torqueTarget;
+			//data1[sweep.k].torqueTarget[2] 	= motor_data[2].torqueTarget;
 			data1[sweep.k].torqueActual[2] 	= motor_data[2].torqueActual;
 			data1[sweep.k].velocityActual[2] = motor_data[2].velocityActual;
 			data1[sweep.k].velocityTarget[2] = motor_data[2].velocityTarget;
@@ -548,7 +555,6 @@ if(systick_counter) //1ms
 	}
 	else if(mode == MODE_CHIRP_TORQUE)
 	{
-
 		sweep.t = sweep.k * sweep.Ta;
 		sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
 		motor_data[2].torqueTarget = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
@@ -569,16 +575,14 @@ if(systick_counter) //1ms
 
 		}
 		tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
+		motor_data[2].torqueActual = tmc4671_getActualTorque_raw(2);
 
-		data1[sweep.k].torqueTarget[2] 	= motor_data[2].torqueTarget;
 		data1[sweep.k].torqueActual[2] 	= motor_data[2].torqueActual;
+		data1[sweep.k].torqueTarget[2] 	= motor_data[2].torqueTarget;
+
 		data1[sweep.k].velocityActual[2] = motor_data[2].velocityActual;
 		data1[sweep.k].velocityTarget[2] = motor_data[2].velocityTarget;
-		data1[sweep.k].velocityIntegratorValue[2] = (int32_t)motor_control[2].velocityIntegratorValue;
 
-		data2[sweep.k].positionActual = motor_data[2].positionActual;
-		data2[sweep.k].positionTarget = motor_data[2].positionTarget;
-		data2[sweep.k].positionIntegratorValue = (int32_t)motor_control[2].positionIntegratorValue;
 
 		sweep.k++;
 
@@ -605,8 +609,11 @@ if(systick_counter) //1ms
 		snprintf(string+strlen(string), 1500, "%s",  TMC4671_highLevel_getStatus(2));
 		// snprintf(string+strlen(string), 1500, "Vel Int Val  = %f\n", motor_control[2].velocityIntegratorValue);
 		// snprintf(string+strlen(string), 1500, "TorqueTarget = %ld\n", motor_data[2].torqueTarget);
-		// snprintf(string+strlen(string), 1500, "V Target  = %ld\n", motor_data[2].velocityTarget);
-		// snprintf(string+strlen(string), 1500, "V Actual  = %ld\n", motor_data[2].velocityActual);
+		snprintf(string+strlen(string), 1500, "Vel Target  = %ld\n", motor_data[2].velocityTarget);
+		snprintf(string+strlen(string), 1500, "Vel Actual  = %ld\n", motor_data[2].velocityActual);
+		snprintf(string+strlen(string), 1500, "Vel int val = %.1f\n", motor_control[2].velocityIntegratorValue);
+		snprintf(string+strlen(string), 1500, "Pos Target  = %ld\n", motor_data[2].positionTarget);
+		snprintf(string+strlen(string), 1500, "Pos Actual  = %ld\n", motor_data[2].positionActual);
 		snprintf(string+strlen(string), 1500, "Velocity P %.1f\n",  motor_control[2].velocityP);
 		snprintf(string+strlen(string), 1500, "Velocity I %.1f\n",  motor_control[2].velocityI);
 		snprintf(string+strlen(string), 1500, "Position P %.1f\n",  motor_control[2].positionP);

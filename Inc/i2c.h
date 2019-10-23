@@ -51,7 +51,6 @@
 
 /* USER CODE END Includes */
 
-extern I2C_HandleTypeDef hi2c1;
 extern I2C_HandleTypeDef hi2c3;
 extern I2C_HandleTypeDef hi2c4;
 
@@ -61,7 +60,6 @@ extern I2C_HandleTypeDef hi2c4;
 
 extern void _Error_Handler(char *, int);
 
-void MX_I2C1_Init(void);
 void MX_I2C3_Init(void);
 void MX_I2C4_Init(void);
 

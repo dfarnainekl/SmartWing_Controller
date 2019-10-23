@@ -6,7 +6,7 @@
   ******************************************************************************
   ** This notice applies to any and all portions of this file
   * that are not between comment pairs USER CODE BEGIN and
-  * USER CODE END. Other portions of this file, whether
+  * USER CODE END. Other portions of this file, whether 
   * inserted by the user or by software development tools
   * are owned by their respective copyright owners.
   *
@@ -50,12 +50,7 @@
 
 /* USER CODE END 1 */
 
-/** Configure pins as
-        * Analog
-        * Input
-        * Output
-        * EVENT_OUT
-        * EXTI
+/** Configure pins
      PA9   ------> USB_OTG_FS_VBUS
      PA10   ------> USB_OTG_FS_ID
      PA11   ------> USB_OTG_FS_DM
@@ -75,20 +70,20 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, DRV4_CSN_CTR_Pin|DRV3_CSN_DRV_Pin|DRV4_CSN_DRV_Pin|DRV4_CSN_ENC_Pin
+  HAL_GPIO_WritePin(GPIOC, DRV4_CSN_CTR_Pin|DRV3_CSN_DRV_Pin|DRV4_CSN_DRV_Pin|DRV4_CSN_ENC_Pin 
                           |DRV3_CSN_ENC_Pin|DRV2_CSN_CTR_Pin|DRV1_CSN_CTR_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(DRV3_CSN_CTR_GPIO_Port, DRV3_CSN_CTR_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, LED_GREEN_Pin|DRV3_EN_Pin|DRV4_EN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED_GREEN_Pin|DRV3_EN_Pin|DRV4_EN_Pin|GPIO_PIN_8, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, LED_RED_Pin|DRV1_EN_Pin|DRV2_EN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, DRV1_CSN_ENC_Pin|DRV2_CSN_DRV_Pin|DRV2_CSN_ENC_Pin|DRV1_CSN_DRV_Pin
+  HAL_GPIO_WritePin(GPIOD, DRV1_CSN_ENC_Pin|DRV2_CSN_DRV_Pin|DRV2_CSN_ENC_Pin|DRV1_CSN_DRV_Pin 
                           |CAN1_STBY_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
@@ -106,9 +101,9 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PCPin PCPin PCPin PCPin
+  /*Configure GPIO pins : PCPin PCPin PCPin PCPin 
                            PCPin PCPin PCPin */
-  GPIO_InitStruct.Pin = DRV4_CSN_CTR_Pin|DRV3_CSN_DRV_Pin|DRV4_CSN_DRV_Pin|DRV4_CSN_ENC_Pin
+  GPIO_InitStruct.Pin = DRV4_CSN_CTR_Pin|DRV3_CSN_DRV_Pin|DRV4_CSN_DRV_Pin|DRV4_CSN_ENC_Pin 
                           |DRV3_CSN_ENC_Pin|DRV2_CSN_CTR_Pin|DRV1_CSN_CTR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -122,16 +117,18 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(DRV3_CSN_CTR_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PBPin PBPin PBPin PBPin */
-  GPIO_InitStruct.Pin = LED_GREEN_Pin|DRV3_EN_Pin|DRV4_EN_Pin|CAN2_STBY_Pin|GPIO_PIN_8;
+  /*Configure GPIO pins : PBPin PBPin PBPin PB8 
+                           PBPin */
+  GPIO_InitStruct.Pin = LED_GREEN_Pin|DRV3_EN_Pin|DRV4_EN_Pin|GPIO_PIN_8 
+                          |CAN2_STBY_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PDPin PDPin PDPin PDPin
+  /*Configure GPIO pins : PDPin PDPin PDPin PDPin 
                            PDPin PDPin PDPin PDPin */
-  GPIO_InitStruct.Pin = LED_RED_Pin|DRV1_CSN_ENC_Pin|DRV2_CSN_DRV_Pin|DRV2_CSN_ENC_Pin
+  GPIO_InitStruct.Pin = LED_RED_Pin|DRV1_CSN_ENC_Pin|DRV2_CSN_DRV_Pin|DRV2_CSN_ENC_Pin 
                           |DRV1_CSN_DRV_Pin|CAN1_STBY_Pin|DRV1_EN_Pin|DRV2_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
