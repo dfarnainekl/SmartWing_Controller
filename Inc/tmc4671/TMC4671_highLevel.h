@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+
 void TMC4671_highLevel_init(uint8_t drv);
 
 void TMC4671_highLevel_pwmOff(uint8_t drv);

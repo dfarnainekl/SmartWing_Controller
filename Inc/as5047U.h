@@ -27,6 +27,7 @@
 #define ADDR_NV_SETTINGS3		0x001A
 #define ADDR_NV_ECC			  	0x001B
 
+extern uint8_t as5074uErrorCounter[4];
 
 uint16_t as5047U_getAngle(uint8_t drv);
 uint16_t as5047U_getAngle_fast(uint8_t drv);

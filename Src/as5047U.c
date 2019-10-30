@@ -5,6 +5,8 @@
 #include <limits.h>
 #include <string.h>
 
+#define PRINT_ERRORS 0
+
 static void spiMode_set(uint8_t drv)
 {
 	swdriver[drv].SPI->Init.CLKPolarity = SPI_POLARITY_LOW;
@@ -77,11 +79,15 @@ static uint32_t as5047U_sendCommand(uint8_t drv, uint8_t rw, uint16_t address)
 
 static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 {
+#if PRINT_ERRORS
 	static char string[500];
 	static char string2[50];
+#endif
+
 	uint32_t data32 = 0;
 	uint16_t data16 = 0;
 
+#if PRINT_ERRORS
 	sprintf(string, "\n\n");
 
 	if(error)
@@ -89,38 +95,89 @@ static void diag(uint8_t drv, uint8_t warning, uint8_t error)
 	else if (warning)
 		strcat (string,"WARNING\t");
 
-
-
 	sprintf(string2, "drv %d\n", drv);
 	strcat (string,string2);
+#endif
 
 	as5047U_sendCommand(drv, AS5047U_READ, ADDR_ERRFL);
 	data32 = as5047U_sendCommand(drv, AS5047U_READ, ADDR_ERRFL);
 	data16 =(uint16_t) ((data32 & 0x003FFF00)>>8);
 
 	if((data16>>0)&0x01)
-		 strcat (string,"AGC-warning\n");
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
+		strcat (string,"AGC-warning\n");
+		#endif
+	}
 	else if((data16>>1)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"MagHalf\n");
+		#endif
+	}
 	else if((data16>>2)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"P2ram_warning\n");
+		#endif
+	}
 	else if((data16>>3)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"P2ram_error\n");
+		#endif
+	}
 	else if((data16>>4)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"Framing error\n");
+		#endif
+	}
 	else if((data16>>5)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"Command error\n");
+		#endif
+	}
 	else if((data16>>6)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"CRC error\n");
+		#endif
+	}
 	else if((data16>>7)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"WDTST\n");
+		#endif
+	}
 	else if((data16>>9)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"OffCompNotFinished\n");
+		#endif
+	}
 	else if((data16>>10)&0x01)
+	{
+		as5074uErrorCounter[drv]++;
+		#if PRINT_ERRORS
 		strcat (string,"CORDIC_Overflow\n");
+		#endif
+	}
 
-	  // HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
-	  // HAL_Delay(300);
+	#if PRINT_ERRORS
+	HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 500);
+	HAL_Delay(300);
+	#endif
 }
 
 

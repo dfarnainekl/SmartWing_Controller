@@ -7,5 +7,6 @@
 #define READ 0x00
 
 void tmc6200_highLevel_init(uint8_t drv);
+void tmc6200_highLeve_resetErrorFlags(uint8_t drv);
 
 #endif /* TMC6200_HIGHLEVEL_H_ */

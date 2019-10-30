@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include "spi.h"
 
-#define DRV0_OFFSET_POS0			45640
-#define DRV1_OFFSET_POS0			64408
-#define DRV2_OFFSET_POS0			55350
-#define DRV3_OFFSET_POS0			61900
+#define DRV0_OFFSET_POS0			0
+#define DRV1_OFFSET_POS0			0
+#define DRV2_OFFSET_POS0			0
+#define DRV3_OFFSET_POS0			0
 
 
 #define DRV0_OFFSET_I0 				38907 	// FIXME offsets are changing!?

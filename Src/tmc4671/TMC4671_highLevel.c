@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 
+
 //TODO: use functions from TMC4671.c, use masking
 void TMC4671_highLevel_init(uint8_t drv)
 {
@@ -350,36 +351,26 @@ char* TMC4671_highLevel_getStatus(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
 	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
 	uint16_t torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
-	// uint16_t position_i = tmc4671_readRegister16BitValue(drv, TMC4671_PID_POSITION_P_POSITION_I, BIT_0_TO_15);
-	// uint16_t velocoty_i = tmc4671_readRegister16BitValue(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, BIT_0_TO_15);
-	// int16_t position_p = tmc4671_readRegister16BitValue(drv, TMC4671_PID_POSITION_P_POSITION_I, BIT_16_TO_31);
-	// uint16_t velocoty_p = tmc4671_readRegister16BitValue(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, BIT_16_TO_31);
 
 	snprintf(&string[drv][0], 500, 	"Drive %d\n", drv);
-	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Position-Filter [f]: %s\n",  enabled?"on":"off");
-	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Torque-Limit    [c]: %d\n",  torque_flux_limit);
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Position-Filter [f]: %s\n",  enabled?"on":"off");
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Torque-Limit    [c]: %d\n",  torque_flux_limit);
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Encoder            : %d\n",  as5047U_getAngle(drv));
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Position           : %ld\n",  tmc4671_getActualPosition(drv));
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Velocity           : %ld\n",  tmc4671_getActualVelocity(drv));
 	// snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Velocity-P:   [g,t]: %d\n",  velocoty_p);
 	// snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Velocity-I:   [j,u]: %d\n",  velocoty_i);
 	// snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Position-P:   [h,z]: %d\n",  position_p);
 	// snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Position-I:   [k,i]: %d\n",  position_i);
-	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "I0:                  %d\n",  tmc4671_getAdcI0Offset(drv));
-	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "I1:                  %d\n",  tmc4671_getAdcI1Offset(drv));
-	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "---------------------------\n");
-	// snprintf(&string[drv][0], 300,
-	// 	"Drive %d\n"
-	// 	"Position-Filter [f]: %s\n"
-	// 	"Torque-Limit    [c]: %d\n"
-	// 	"Velocity-I:     [u]: %d\n"
-	// 	"Position-I:     [i]: %d\n"
-	// 	"I0:                  %d\n"
-	// 	"I1:                  %d\n"
-	// 	"---------------------------\n",
-	// 		drv, enabled?"on":"off", torque_flux_limit, velocoty_i, position_i, tmc4671_getAdcI0Offset(drv),  tmc4671_getAdcI1Offset(drv));
+//	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "I0:                  %d\n",  tmc4671_getAdcI0Offset(drv));
+//	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "I1:                  %d\n",  tmc4671_getAdcI1Offset(drv));
+	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "---------------------------\n");
 
 	return &string[drv][0];
 }
 
 
+		 //motor_data[i].positionActual = tmc4671_getActualPosition(i);
 
 
 
