@@ -47,6 +47,8 @@ typedef struct data2_s
 typedef struct control_s
 {
 	float angleIn;
+	float angleOut;
+
 	float torqueTarget;
 
 	float velocityTarget;
@@ -68,18 +70,12 @@ typedef struct control_s
 
 typedef struct motor_s
 {
-	int32_t  torqueActual;		// only for logging
-	int32_t  torqueTarget;		// written to tmc4671
+	int32_t torqueActual;		// only for logging
+	int32_t torqueTarget;		// written to tmc4671
 	int32_t velocityActual;
 	int32_t velocityTarget;		// only for logging
 	int32_t positionTarget;		// only for logging
 	int32_t positionActual;
-	float angleBeta;
-	float angleAlpha;
-	float velocityBeta;
-	float velocityAlpha;
-	float torqueBeta;
-	float torqueAlpha;
 } motor_t;
 
 void logic_init(void);
@@ -90,8 +86,9 @@ float sat(float x);
 void positionPI(uint8_t drv);
 void velocityPI(uint8_t drv);
 
-float clacAngle(uint8_t drv, float angleBeta);
-float clacAngleVelocity(uint8_t drv, float angleBeta, float velocityBeta);
+int32_t clacAngle(uint8_t drv);
+// float clacAngle(uint8_t drv, float angleBeta);
+// float clacAngleVelocity(uint8_t drv, float angleBeta, float velocityBeta);
 float calcTorque(uint8_t drv, float angleAlpha, float torqueAlpha);
 
 #endif /* LOGIC_H_ */

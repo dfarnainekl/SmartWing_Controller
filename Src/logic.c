@@ -129,25 +129,27 @@ void logic_init(void)
 	// for(i=0; i<4; i++) 	TMC4671_highLevel_pwmOff(i);
 	// while(1);
 
+	//outer
 	motor_control[0].velocityP = 10;
 	motor_control[0].velocityI = 10;
-	motor_control[0].positionP = 20;
-	motor_control[0].positionI = 200;
+	motor_control[0].positionP = 0.5;
+	motor_control[0].positionI = 0;
 
 	motor_control[2].velocityP = 10;
 	motor_control[2].velocityI = 10;
-	motor_control[2].positionP = 20;
-	motor_control[2].positionI = 200;
+	motor_control[2].positionP = 0.5;
+	motor_control[2].positionI = 0;
 
-	motor_control[1].velocityP = 20;
-	motor_control[1].velocityI = 20;
-	motor_control[1].positionP = 20;
-	motor_control[1].positionI = 300;
+	//inner
+	motor_control[1].velocityP = 10;
+	motor_control[1].velocityI = 10;
+	motor_control[1].positionP = 0.5;
+	motor_control[1].positionI = 0;
 
-	motor_control[3].velocityP = 20;
-	motor_control[3].velocityI = 20;
-	motor_control[3].positionP = 20;
-	motor_control[3].positionI = 300;
+	motor_control[3].velocityP = 10;
+	motor_control[3].velocityI = 10;
+	motor_control[3].positionP = 0.5;
+	motor_control[3].positionI = 0;
 
 
 
@@ -205,12 +207,102 @@ void logic_loop(void)
 
 		if(mode == MODE_RCCONTROL)
 		{
-			for(i=0; i<4; i++) motor_control[i].positionTarget = motor_control[i].angleIn;
+
+			for(i=0; i<4; i++) motor_control[i].positionTarget = clacAngle(i);
+		}
+
+	}
+	/* -------------------------------------------------------------------------  */
+
+	if (systick_counter) //1ms
+	{
+		systick_counter = 0;
+
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
+
+
+		for(i=0; i<4; i++) motor_data[i].positionActual = tmc4671_getActualPosition(i);
+		for(i=0; i<4; i++) motor_data[i].velocityActual = tmc4671_getActualVelocity(i);
+
+		for(i=0; i<4; i++) motor_control[i].positionActual = (float)motor_data[i].positionActual;
+		for(i=0; i<4; i++) motor_control[i].velocityActual = (float)motor_data[i].velocityActual;
+
+
+
+		if (mode == MODE_STOP)
+		{
+			for(i=0; i<4; i++) motor_control[i].torqueTarget = 0;
+			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
+		}
+		else if (mode == MODE_TORQUE)
+		{
+
+			//state transform
+			for(i=0; i<4; i++) motor_data[i].torqueTarget = (int32_t)(motor_control[i].torqueTarget);
+			for(i=0; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
+		}
+		else if (mode == MODE_POSITION || mode == MODE_RCCONTROL)
+		{
+
+
+			for (i = 0; i < 4; i++) positionPI(i);
+			for (i = 0; i < 4; i++) velocityPI(i);
+
+
+			//for (i = 0; i < 4; i++) motor_data[i].torqueBeta = calcTorque(i, motor_data[i].angleAlpha, motor_data[i].torqueAlpha);
+
+			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = (int32_t)motor_control[i].torqueTarget;
+
+			for(i=0; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
+
 		}
 
 
-
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0);
 	}
+
+
+	/* -------------------------------------------------------------------------  */
+
+	if (stats == true && systick_counter_3 >= 200) //5Hz
+	{
+		systick_counter_3 = 0;
+
+#if MATLAB == 0
+
+		snprintf(string, 2000, "%s", clear_string);
+		snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(2));
+		snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(3));
+		snprintf(string+strlen(string), 2000-strlen(string), "Outer\n");
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity P      %.1f\n", motor_control[2].velocityP);
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity I      %.1f\n", motor_control[2].velocityI);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position P      %.1f\n", motor_control[2].positionP);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position I      %.1f\n", motor_control[2].positionI);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position Error  %.1f\n", motor_control[2].positionError);
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity Error  %.1f\n", motor_control[2].velocityError);
+		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+		snprintf(string+strlen(string), 2000-strlen(string), "Inner\n");
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity P      %.1f\n", motor_control[3].velocityP);
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity I      %.1f\n", motor_control[3].velocityI);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position P      %.1f\n", motor_control[3].positionP);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position I      %.1f\n", motor_control[3].positionI);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position Error  %.1f\n", motor_control[3].positionError);
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity Error  %.1f\n", motor_control[3].velocityError);
+		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+		snprintf(string+strlen(string), 2000-strlen(string), "pwm_in:      %d  %d  %d  %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
+		snprintf(string+strlen(string), 2000-strlen(string), "angleIn:     % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].angleIn, motor_control[1].angleIn, motor_control[2].angleIn, motor_control[3].angleIn);
+		snprintf(string+strlen(string), 2000-strlen(string), "angleOut:    % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].angleOut, motor_control[1].angleOut, motor_control[2].angleOut, motor_control[3].angleOut);
+		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+		snprintf(string+strlen(string), 2000-strlen(string), "Pos Target:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionTarget, motor_control[1].positionTarget, motor_control[2].positionTarget, motor_control[3].positionTarget);
+		snprintf(string+strlen(string), 2000-strlen(string), "Pos Actual:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionActual, motor_control[1].positionActual, motor_control[2].positionActual, motor_control[3].positionActual);
+		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+		// snprintf(string+strlen(string), 2000-strlen(string), "TorqueTarget C:    % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].torqueTarget, motor_control[1].torqueTarget, motor_control[2].torqueTarget, motor_control[3].torqueTarget);
+		// snprintf(string+strlen(string), 2000-strlen(string), "TorqueTarget M:    %ld  %ld  %ld  %ld\n", motor_data[0].torqueTarget, motor_data[1].torqueTarget, motor_data[2].torqueTarget, motor_data[3].torqueTarget);
+		// snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
+#endif
+	} // end of: if(systick_counter_3 >= 200) //5Hz
+
 	/* -------------------------------------------------------------------------  */
 	if (rx_byte_new)
 	{
@@ -369,15 +461,15 @@ void logic_loop(void)
 
 
 		case 'r':
-			motor_control[0].positionP += 1.0;
-			motor_control[2].positionP += 1.0;
+			motor_control[0].positionP += 0.1;
+			motor_control[2].positionP += 0.1;
 			break;
 
 		case 'f':
-			if (motor_control[0].positionP >= 1.0)
+			if (motor_control[0].positionP >= 0.1)
 			{
-				motor_control[0].positionP -= 1.0;
-				motor_control[2].positionP -= 1.0;
+				motor_control[0].positionP -= 0.1;
+				motor_control[2].positionP -= 0.1;
 			}
 			else
 			{
@@ -444,15 +536,15 @@ void logic_loop(void)
 
 
 		case 'i':
-			motor_control[1].positionP += 1.0;
-			motor_control[3].positionP += 1.0;
+			motor_control[1].positionP += 0.1;
+			motor_control[3].positionP += 0.1;
 			break;
 
 		case 'k':
-			if (motor_control[1].positionP >= 1.0)
+			if (motor_control[1].positionP >= 0.1)
 			{
-				motor_control[1].positionP -= 1.0;
-				motor_control[3].positionP -= 1.0;
+				motor_control[1].positionP -= 0.1;
+				motor_control[3].positionP -= 0.1;
 			}
 			else
 			{
@@ -537,146 +629,6 @@ void logic_loop(void)
 	} // end of: if(rx_byte_new)
 	/* -------------------------------------------------------------------------  */
 
-	if (systick_counter) //1ms
-	{
-		systick_counter = 0;
-
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
-
-
-		for(i=0; i<4; i++) motor_data[i].velocityActual = tmc4671_getActualVelocity(i);
-		for(i=0; i<4; i++) motor_data[i].positionActual = tmc4671_getActualPosition(i);
-
-		for(i=0; i<4; i++) motor_data[i].angleBeta      =  (float)motor_data[i].positionActual*360.0/65536.0; //deg
-		for(i=0; i<4; i++) motor_data[i].velocityBeta   =  (float)motor_data[i].velocityActual;	//rpm
-
-		for(i=0; i<4; i++) motor_data[i].angleAlpha     = clacAngle(i, motor_data[i].angleBeta);
-		for(i=0; i<4; i++) motor_data[i].velocityAlpha  = clacAngleVelocity(i, motor_data[i].angleBeta, motor_data[i].velocityBeta);
-
-		//state transform
-		motor_control[0].positionActual = (motor_data[1].angleAlpha-motor_data[0].angleAlpha)/2.0;
-		motor_control[1].positionActual = (motor_data[1].angleAlpha+motor_data[0].angleAlpha)/2.0;
-		motor_control[2].positionActual = (motor_data[3].angleAlpha-motor_data[2].angleAlpha)/2.0;
-		motor_control[3].positionActual = (motor_data[3].angleAlpha+motor_data[2].angleAlpha)/2.0;
-
-		motor_control[0].velocityActual = (motor_data[1].velocityAlpha-motor_data[0].velocityAlpha)/2.0;
-		motor_control[1].velocityActual = (motor_data[1].velocityAlpha+motor_data[0].velocityAlpha)/2.0;
-		motor_control[2].velocityActual = (motor_data[3].velocityAlpha-motor_data[2].velocityAlpha)/2.0;
-		motor_control[3].velocityActual = (motor_data[3].velocityAlpha+motor_data[2].velocityAlpha)/2.0;
-
-
-		// //state transform
-		// motor_control[0].positionActual = (motor_data[1].angleBeta-motor_data[0].angleBeta)/2.0;
-		// motor_control[1].positionActual = (motor_data[1].angleBeta+motor_data[0].angleBeta)/2.0;
-		// motor_control[2].positionActual = (motor_data[3].angleBeta-motor_data[2].angleBeta)/2.0;
-		// motor_control[3].positionActual = (motor_data[3].angleBeta+motor_data[2].angleBeta)/2.0;
-		//
-		// motor_control[0].velocityActual = (motor_data[1].velocityBeta-motor_data[0].velocityBeta)/2.0;
-		// motor_control[1].velocityActual = (motor_data[1].velocityBeta+motor_data[0].velocityBeta)/2.0;
-		// motor_control[2].velocityActual = (motor_data[3].velocityBeta-motor_data[2].velocityBeta)/2.0;
-		// motor_control[3].velocityActual = (motor_data[3].velocityBeta+motor_data[2].velocityBeta)/2.0;
-
-
-
-
-		if (mode == MODE_STOP)
-		{
-			motor_control[0].torqueTarget = 0;
-			motor_control[1].torqueTarget = 0;
-			motor_control[2].torqueTarget = 0;
-			motor_control[3].torqueTarget = 0;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
-		}
-		else if (mode == MODE_TORQUE)
-		{
-
-			//state transform
-			motor_data[0].torqueTarget = (int32_t)(motor_control[1].torqueTarget - motor_control[0].torqueTarget);
-			motor_data[1].torqueTarget = (int32_t)(motor_control[1].torqueTarget + motor_control[0].torqueTarget);
-			motor_data[2].torqueTarget = (int32_t)(motor_control[3].torqueTarget - motor_control[2].torqueTarget);
-			motor_data[3].torqueTarget = (int32_t)(motor_control[3].torqueTarget + motor_control[2].torqueTarget);
-
-
-
-			for(i=0; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
-		}
-		else if (mode == MODE_POSITION || mode == MODE_RCCONTROL)
-		{
-
-
-			for (i = 0; i < 4; i++) positionPI(i);
-			for (i = 0; i < 4; i++) velocityPI(i);
-
-
-			// motor_data[0].torqueTarget = (int32_t)(motor_control[1].torqueTarget - motor_control[0].torqueTarget);
-			// motor_data[1].torqueTarget = (int32_t)(motor_control[1].torqueTarget + motor_control[0].torqueTarget);
-			// motor_data[2].torqueTarget = (int32_t)(motor_control[3].torqueTarget - motor_control[2].torqueTarget);
-			// motor_data[3].torqueTarget = (int32_t)(motor_control[3].torqueTarget + motor_control[2].torqueTarget);
-
-			// state transform
-			motor_data[0].torqueAlpha = (motor_control[1].torqueTarget - motor_control[0].torqueTarget);
-			motor_data[1].torqueAlpha = (motor_control[1].torqueTarget + motor_control[0].torqueTarget);
-			motor_data[2].torqueAlpha = (motor_control[3].torqueTarget - motor_control[2].torqueTarget);
-			motor_data[3].torqueAlpha = (motor_control[3].torqueTarget + motor_control[2].torqueTarget);
-
-
-			for (i = 0; i < 4; i++) motor_data[i].torqueBeta = calcTorque(i, motor_data[i].angleAlpha, motor_data[i].torqueAlpha);
-			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = (int32_t)motor_data[i].torqueBeta;
-
-			//for (i = 0; i < 4; i++) motor_data[i].torqueTarget = (int32_t)motor_data[i].torqueAlpha;
-
-
-
-			for(i=0; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
-
-		}
-
-
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0);
-	}
-
-
-	/* -------------------------------------------------------------------------  */
-
-	if (stats == true && systick_counter_3 >= 200) //5Hz
-	{
-		systick_counter_3 = 0;
-
-#if MATLAB == 0
-
-		snprintf(string, 2000, "%s", clear_string);
-		snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(2));
-		snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(3));
-		snprintf(string+strlen(string), 2000-strlen(string), "Twist\n");
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity P      %.1f\n", motor_control[2].velocityP);
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity I      %.1f\n", motor_control[2].velocityI);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position P      %.1f\n", motor_control[2].positionP);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position I      %.1f\n", motor_control[2].positionI);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position Error  %.1f\n", motor_control[2].positionError);
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity Error  %.1f\n", motor_control[2].velocityError);
-		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-		snprintf(string+strlen(string), 2000-strlen(string), "Rotate\n");
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity P      %.1f\n", motor_control[3].velocityP);
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity I      %.1f\n", motor_control[3].velocityI);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position P      %.1f\n", motor_control[3].positionP);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position I      %.1f\n", motor_control[3].positionI);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position Error  %.1f\n", motor_control[3].positionError);
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity Error  %.1f\n", motor_control[3].velocityError);
-		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-		snprintf(string+strlen(string), 2000-strlen(string), "pwm_in:      %d  %d  %d  %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
-		snprintf(string+strlen(string), 2000-strlen(string), "angleIn:     % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].angleIn, motor_control[1].angleIn, motor_control[2].angleIn, motor_control[3].angleIn);
-		snprintf(string+strlen(string), 2000-strlen(string), "angleBeta:   % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_data[0].angleBeta, motor_data[1].angleBeta, motor_data[2].angleBeta, motor_data[3].angleBeta);
-		snprintf(string+strlen(string), 2000-strlen(string), "angleAlpha:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_data[0].angleAlpha, motor_data[1].angleAlpha, motor_data[2].angleAlpha, motor_data[3].angleAlpha);
-		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-		snprintf(string+strlen(string), 2000-strlen(string), "Pos Target:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionTarget, motor_control[1].positionTarget, motor_control[2].positionTarget, motor_control[3].positionTarget);
-		snprintf(string+strlen(string), 2000-strlen(string), "Pos Actual:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionActual, motor_control[1].positionActual, motor_control[2].positionActual, motor_control[3].positionActual);
-		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-		// snprintf(string+strlen(string), 2000-strlen(string), "TorqueTarget C:    % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].torqueTarget, motor_control[1].torqueTarget, motor_control[2].torqueTarget, motor_control[3].torqueTarget);
-		// snprintf(string+strlen(string), 2000-strlen(string), "TorqueTarget M:    %ld  %ld  %ld  %ld\n", motor_data[0].torqueTarget, motor_data[1].torqueTarget, motor_data[2].torqueTarget, motor_data[3].torqueTarget);
-		// snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-#endif
-	} // end of: if(systick_counter_3 >= 200) //5Hz
 
 } // end of: void logic_loop(void)
 
@@ -698,87 +650,38 @@ void HAL_SYSTICK_Callback(void)
 	}
 }
 
-float clacAngle(uint8_t drv, float angleBeta)
+
+int32_t clacAngle(uint8_t drv)
 {
-	static float angleAlpha = 0;
-	static float angleBetaSat = 0;
-
-	angleBetaSat = angleBeta;
-
-
-	if (drv == 0)
+	if(drv == 0)
 	{
-		angleAlpha = angleBetaSat/2.0;
+		motor_control[drv].angleOut = -(motor_control[drv].angleIn + motor_control[drv+1].angleIn);
+		//angleOut[drv] = -(angleIn[drv] + angleIn[drv+1]);
 	}
-	else if (drv == 2)
+	else if(drv == 2)
 	{
-		angleAlpha = angleBetaSat/2.0;
+		motor_control[drv].angleOut = (motor_control[drv].angleIn + motor_control[drv+1].angleIn);
+		//angleOut[drv] = angleIn[drv] + angleIn[drv+1];
 	}
-	else if (drv == 1)
+	else if(drv == 1)
 	{
-		angleBetaSat = -angleBetaSat;
-		angleAlpha = (  0.400958225615243*angleBetaSat
-					  - 0.926978370360763e-4*angleBetaSat*angleBetaSat
-					  - 3.02679825358732e-6*angleBetaSat*angleBetaSat*angleBetaSat )/2.0;
+		motor_control[drv].angleOut = -(  2.490378*motor_control[drv].angleIn
+										+ 0.001711*motor_control[drv].angleIn*motor_control[drv].angleIn
+										+ 0.000138*motor_control[drv].angleIn*motor_control[drv].angleIn*motor_control[drv].angleIn );
+		//angleOut[drv]= -(2.490378*angleIn[drv] + 0.001711*angleIn[drv]*angleIn[drv] + 0.000138*angleIn[drv]*angleIn[drv]*angleIn[drv]);
 	}
-	else if (drv == 3)
+	else if(drv == 3)
 	{
-		angleAlpha = (  0.400958225615243*angleBetaSat
-					  - 0.926978370360763e-4*angleBetaSat*angleBetaSat
-					  - 3.02679825358732e-6*angleBetaSat*angleBetaSat*angleBetaSat )/2.0;
+		motor_control[drv].angleOut =  (  2.490378*motor_control[drv].angleIn
+										+ 0.001711*motor_control[drv].angleIn*motor_control[drv].angleIn
+										+ 0.000138*motor_control[drv].angleIn*motor_control[drv].angleIn*motor_control[drv].angleIn );
+		//angleOut[drv]= (2.490378*angleIn[drv] + 0.001711*angleIn[drv]*angleIn[drv] + 0.000138*angleIn[drv]*angleIn[drv]*angleIn[drv]);
 	}
+	motor_control[drv].angleOut = motor_control[drv].angleOut * 2.0;
 
-	return angleAlpha;
+	return (int32_t)(motor_control[drv].angleOut / 360.0 * 65536.0);
 }
 
-float clacAngleVelocity(uint8_t drv, float angleBeta, float velocityBeta)
-{
-	static float veloctyAlpha = 0;
-	static float dalphadbeta = 0;
-	static float angleBetaSat = 0;
-
-	if(angleBeta > 50.0)
-		angleBetaSat = 50.0;
-	else if(angleBeta < -50.0)
-		angleBetaSat = -50.0;
-	else
-		angleBetaSat = angleBeta;
-
-	if (drv == 0)
-	{
-		veloctyAlpha = velocityBeta/2.0;
-	}
-	else if (drv == 2)
-	{
-		veloctyAlpha = velocityBeta/2.0;
-	}
-	else if (drv == 1)
-	{
-		angleBetaSat = -angleBetaSat;
-		dalphadbeta =     0.400935427396172939e0
-						+(-0.151316755738938497e-3) * angleBetaSat
-						+(-0.903150716409656768e-5) * angleBetaSat * angleBetaSat
-						+(-0.138545436985387085e-7) * pow(angleBetaSat, 3)
-						+  0.177013373152695001e-9  * pow(angleBetaSat, 4)
-						+  0.441290283747026576e-12 * pow(angleBetaSat, 5)
-						+(-0.543487101064459958e-13)* pow(angleBetaSat, 6) ;
-
-		veloctyAlpha = dalphadbeta * (velocityBeta/2.0) ;
-	}
-	else if (drv == 3)
-	{
-		dalphadbeta =     0.400935427396172939e0
-						+(-0.151316755738938497e-3) * angleBetaSat
-						+(-0.903150716409656768e-5) * angleBetaSat * angleBetaSat
-						+(-0.138545436985387085e-7) * pow(angleBetaSat, 3)
-						+  0.177013373152695001e-9  * pow(angleBetaSat, 4)
-						+  0.441290283747026576e-12 * pow(angleBetaSat, 5)
-						+(-0.543487101064459958e-13)* pow(angleBetaSat, 6) ;
-		dalphadbeta = 1;
-		veloctyAlpha = dalphadbeta * (velocityBeta/2.0) ;
-	}
-	return veloctyAlpha;
-}
 
 
 float calcTorque(uint8_t drv, float angleAlpha, float torqueAlpha)
