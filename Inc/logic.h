@@ -4,6 +4,7 @@
 #include "stm32h7xx_hal.h"
 
 #define ANGLE_MAX_ALPHA_DEGREE 	20.0
+#define ORDER 2
 
 typedef enum
 {
@@ -14,7 +15,7 @@ typedef struct sweep_s
 {
 	float Ta;
 	uint32_t N;
-	uint16_t U;
+	float U;
 	float omegaStart;
 	float omegaEnd;
 	char string[200];
@@ -23,25 +24,27 @@ typedef struct sweep_s
 	float r;
 	float t;
 	MODE mode;
+	float out;
 } sweep_t;
 
 typedef struct data1_s
 {
-	// int32_t	posTarget[4];
-	// int32_t	posActual[4];
-	int16_t torqueActual[4];
-	int16_t torqueTarget[4];
-	int32_t velocityActual[4];
-	int32_t velocityTarget[4];
-	int32_t velocityIntegratorValue[4];
+	int32_t torqueActual[2];
+	int32_t torqueTarget[2];
+	int32_t velocityActual[2];
+	int32_t velocityTarget[2];
+	int32_t velocityIntegratorValue[2];
 
+	int32_t positionActual[2];
+	int32_t positionTarget[2];
+	int32_t positionIntegratorValue[2];
 } data1_t;
 
 typedef struct data2_s
 {
-	int32_t positionActual;
-	int32_t positionTarget;
-	int32_t positionIntegratorValue;
+	float torqueTarget[2];
+	float velocityActual[2];
+	float velocityTarget[2];
 } data2_t;
 
 typedef struct control_s
@@ -50,6 +53,10 @@ typedef struct control_s
 	float angleOut;
 
 	float torqueTarget;
+	float x[ORDER];
+	float x_[ORDER];
+
+
 
 	float velocityTarget;
 	float velocityActual;
@@ -81,14 +88,15 @@ typedef struct motor_s
 void logic_init(void);
 void logic_loop(void);
 
+void print_data(int32_t data , uint8_t* string);
+void print_data2(float data , uint8_t* string);
 float sat(float x);
-// int32_t clacAngle(uint8_t drv, float *angleIn);
+
 void positionPI(uint8_t drv);
 void velocityPI(uint8_t drv);
+void velocityPICompensation(uint8_t drv);
 
 int32_t clacAngle(uint8_t drv);
-// float clacAngle(uint8_t drv, float angleBeta);
-// float clacAngleVelocity(uint8_t drv, float angleBeta, float velocityBeta);
 float calcTorque(uint8_t drv, float angleAlpha, float torqueAlpha);
 
 #endif /* LOGIC_H_ */

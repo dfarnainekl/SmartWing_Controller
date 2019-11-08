@@ -7,8 +7,8 @@
 
 #define DRV0_OFFSET_POS0			0
 #define DRV1_OFFSET_POS0			0
-#define DRV2_OFFSET_POS0			0
-#define DRV3_OFFSET_POS0			0
+#define DRV2_OFFSET_POS0			42736
+#define DRV3_OFFSET_POS0			13232
 
 
 #define DRV0_OFFSET_I0 				38907 	// FIXME offsets are changing!?

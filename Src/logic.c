@@ -11,30 +11,33 @@
 #include <math.h>
 #include <string.h>
 
-#define TA				0.001
-#define DATA_N		1024
-// #define DATA_N		4096
-//#define DATA_N		8192
+#define TA			0.001
+//#define DATA_N		1024
+// #define DATA_N		2048
+#define DATA_N		8192
 
-#define MATLAB 0
+#define MATLAB 1
 
 #define MODE_STOP				0
 #define MODE_TORQUE				1
 #define MODE_VELOCITY			2
 #define MODE_POSITION			3
-#define MODE_IDENTIFY_VELOCITY 	4
-#define MODE_CHIRP_TORQUE		5
-#define MODE_VELOCITY_STEP		6
+#define MODE_TORQUE_SWEEP		4
+#define MODE_VELOCITY_SWEEP		5
+#define MODE_POSITION_SWEEP		6
 #define MODE_POSITION_STEP		7
 #define MODE_RCCONTROL			8
+#define MODE_IDLE				9
+#define MODE_POSITION_SWEEP2	10
+#define MODE_CONTROL_TEST		11
 
 uint8_t mode = MODE_STOP;
 
 sweep_t sweep = { .Ta = TA,
 		.N = DATA_N,
 		.U = 1,
-		.omegaStart = 2 * M_PI * 50,
-		.omegaEnd = 2 * M_PI * 500,
+		.omegaStart = 2 * M_PI * 0.1,
+		.omegaEnd = 2 * M_PI * 20,
 		.k = 0,
 		.mode = AIL
 };
@@ -60,11 +63,6 @@ volatile bool pwm_updated = false;
 uint16_t angle[4];
 
 bool stats = true;
-uint16_t integral_pos = 0;
-uint16_t integral_vel = 500;
-uint16_t proportional_pos = 600;
-uint16_t proportional_vel = 8000;
-
 bool current = false;
 
 #if MATLAB
@@ -73,9 +71,11 @@ char clear_string[1] = { '\0' };
 char clear_string[8] = { 27, '[', '2','J', 27, '[', 'H', '\0'};
 #endif
 
+
+
 void logic_init(void)
 {
-	uint8_t i;
+	int32_t i;
 	static char string[500];
 	static bool button_init = true;
 
@@ -101,6 +101,7 @@ void logic_init(void)
 
 	HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
 	rx_byte_new = 0;
+
 	while (!(rx_byte_new && rx_byte == 's') && button_init == true)
 	{
 		button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
@@ -126,46 +127,68 @@ void logic_init(void)
 	rx_byte_new = 0;
 	HAL_Delay(100);
 
-	// for(i=0; i<4; i++) 	TMC4671_highLevel_pwmOff(i);
-	// while(1);
-
 	//outer
 	motor_control[0].velocityP = 10;
-	motor_control[0].velocityI = 10;
-	motor_control[0].positionP = 0.5;
-	motor_control[0].positionI = 0;
+	motor_control[0].velocityI = 1;
+	motor_control[0].positionP = 0.1;
+	motor_control[0].positionI = 0.1;
 
 	motor_control[2].velocityP = 10;
-	motor_control[2].velocityI = 10;
-	motor_control[2].positionP = 0.5;
-	motor_control[2].positionI = 0;
+	motor_control[2].velocityI = 1;
+	motor_control[2].positionP = 0.1;
+	motor_control[2].positionI = 0.1;
 
 	//inner
 	motor_control[1].velocityP = 10;
-	motor_control[1].velocityI = 10;
-	motor_control[1].positionP = 0.5;
-	motor_control[1].positionI = 0;
+	motor_control[1].velocityI = 1;
+	motor_control[1].positionP = 0.1;
+	motor_control[1].positionI = 0.1;
 
 	motor_control[3].velocityP = 10;
-	motor_control[3].velocityI = 10;
-	motor_control[3].positionP = 0.5;
-	motor_control[3].positionI = 0;
+	motor_control[3].velocityI = 1;
+	motor_control[3].positionP = 0.1;
+	motor_control[3].positionI = 0.1;
 
 
+	// //outer
+	// motor_control[0].velocityP = 10;
+	// motor_control[0].velocityI = 10;
+	// motor_control[0].positionP = 0.2;
+	// motor_control[0].positionI = 0.5;
+	//
+	// motor_control[2].velocityP = 10;
+	// motor_control[2].velocityI = 10;
+	// motor_control[2].positionP = 0.2;
+	// motor_control[2].positionI = 0.5;
+	//
+	// //inner
+	// motor_control[1].velocityP = 10;
+	// motor_control[1].velocityI = 10;
+	// motor_control[1].positionP = 0.2;
+	// motor_control[1].positionI = 0.5;
+	//
+	// motor_control[3].velocityP = 10;
+	// motor_control[3].velocityI = 10;
+	// motor_control[3].positionP = 0.2;
+	// motor_control[3].positionI = 0.5;
 
-	// initialize right wing
-	 TMC4671_highLevel_initEncoder_new(2);
-	 TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
-	 TMC4671_highLevel_positionMode_rampToZero(2);
 
-	 TMC4671_highLevel_initEncoder_new(3);
-	 TMC4671_highLevel_positionMode_fluxTorqueRamp(3);
-	 TMC4671_highLevel_positionMode_rampToZero(3);
+    // TMC4671_highLevel_initEncoder_new(2);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
+	// TMC4671_highLevel_positionMode_rampToZero(2);
+	// TMC4671_highLevel_stoppedMode(2);
+	// HAL_Delay(100);
+	// TMC4671_highLevel_initEncoder_new(3);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(3);
+	// TMC4671_highLevel_positionMode_rampToZero(3);
+	// TMC4671_highLevel_positionMode_fluxTorqueRamp(2);
+	// TMC4671_highLevel_positionMode_rampToZero(2);
+
 
 	TMC4671_highLevel_pwmOff(0);
 	TMC4671_highLevel_pwmOff(1);
-//	TMC4671_highLevel_pwmOff(2);
-//	TMC4671_highLevel_pwmOff(3);
+	TMC4671_highLevel_pwmOff(2);
+	TMC4671_highLevel_pwmOff(3);
 
 	//for(i=2; i<4; i++) tmc4671_writeInt(i, TMC4671_PID_POSITION_ACTUAL, 0);
 
@@ -175,8 +198,9 @@ void logic_init(void)
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
 
+	for (i = 0; i < 4; i++) TMC4671_highLevel_setCurrentLimit(i, 15000);
+
 	//for (i = 0; i < 4; i++) TMC4671_highLevel_setPositionFilter(i, false);
-	//for(i=0; i<4; i++)	TMC4671_highLevel_setCurrentLimit(i, 15000);
 
 #if MATLAB
 	snprintf(string, 500, "fininit\n");
@@ -187,6 +211,7 @@ void logic_init(void)
 void logic_loop(void)
 {
 	static char string[1500];
+    static uint8_t data[500] = {0};
 	static uint32_t i = 0;
 
 
@@ -203,65 +228,13 @@ void logic_loop(void)
 	if (pwm_updated)
 	{
 		pwm_updated = false;
-		for(i=0; i<4; i++) motor_control[i].angleIn =   ( (float)(pwm_in[i] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 
 		if(mode == MODE_RCCONTROL)
 		{
-
+			for(i=0; i<4; i++) motor_control[i].angleIn =   ( (float)(pwm_in[i] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 			for(i=0; i<4; i++) motor_control[i].positionTarget = clacAngle(i);
 		}
-
 	}
-	/* -------------------------------------------------------------------------  */
-
-	if (systick_counter) //1ms
-	{
-		systick_counter = 0;
-
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
-
-
-		for(i=0; i<4; i++) motor_data[i].positionActual = tmc4671_getActualPosition(i);
-		for(i=0; i<4; i++) motor_data[i].velocityActual = tmc4671_getActualVelocity(i);
-
-		for(i=0; i<4; i++) motor_control[i].positionActual = (float)motor_data[i].positionActual;
-		for(i=0; i<4; i++) motor_control[i].velocityActual = (float)motor_data[i].velocityActual;
-
-
-
-		if (mode == MODE_STOP)
-		{
-			for(i=0; i<4; i++) motor_control[i].torqueTarget = 0;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
-		}
-		else if (mode == MODE_TORQUE)
-		{
-
-			//state transform
-			for(i=0; i<4; i++) motor_data[i].torqueTarget = (int32_t)(motor_control[i].torqueTarget);
-			for(i=0; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
-		}
-		else if (mode == MODE_POSITION || mode == MODE_RCCONTROL)
-		{
-
-
-			for (i = 0; i < 4; i++) positionPI(i);
-			for (i = 0; i < 4; i++) velocityPI(i);
-
-
-			//for (i = 0; i < 4; i++) motor_data[i].torqueBeta = calcTorque(i, motor_data[i].angleAlpha, motor_data[i].torqueAlpha);
-
-			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = (int32_t)motor_control[i].torqueTarget;
-
-			for(i=0; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
-
-		}
-
-
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0);
-	}
-
-
 	/* -------------------------------------------------------------------------  */
 
 	if (stats == true && systick_counter_3 >= 200) //5Hz
@@ -274,20 +247,16 @@ void logic_loop(void)
 		snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(2));
 		snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(3));
 		snprintf(string+strlen(string), 2000-strlen(string), "Outer\n");
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity P      %.1f\n", motor_control[2].velocityP);
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity I      %.1f\n", motor_control[2].velocityI);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position P      %.1f\n", motor_control[2].positionP);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position I      %.1f\n", motor_control[2].positionI);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position Error  %.1f\n", motor_control[2].positionError);
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity Error  %.1f\n", motor_control[2].velocityError);
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity P      %.2f\n", motor_control[2].velocityP);
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity I      %.2f\n", motor_control[2].velocityI);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position P      %.2f\n", motor_control[2].positionP);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position I      %.2f\n", motor_control[2].positionI);
 		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
 		snprintf(string+strlen(string), 2000-strlen(string), "Inner\n");
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity P      %.1f\n", motor_control[3].velocityP);
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity I      %.1f\n", motor_control[3].velocityI);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position P      %.1f\n", motor_control[3].positionP);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position I      %.1f\n", motor_control[3].positionI);
-		snprintf(string+strlen(string), 2000-strlen(string), "Position Error  %.1f\n", motor_control[3].positionError);
-		snprintf(string+strlen(string), 2000-strlen(string), "Velocity Error  %.1f\n", motor_control[3].velocityError);
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity P      %.2f\n", motor_control[3].velocityP);
+		snprintf(string+strlen(string), 2000-strlen(string), "Velocity I      %.2f\n", motor_control[3].velocityI);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position P      %.2f\n", motor_control[3].positionP);
+		snprintf(string+strlen(string), 2000-strlen(string), "Position I      %.2f\n", motor_control[3].positionI);
 		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
 		snprintf(string+strlen(string), 2000-strlen(string), "pwm_in:      %d  %d  %d  %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
 		snprintf(string+strlen(string), 2000-strlen(string), "angleIn:     % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].angleIn, motor_control[1].angleIn, motor_control[2].angleIn, motor_control[3].angleIn);
@@ -295,13 +264,223 @@ void logic_loop(void)
 		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
 		snprintf(string+strlen(string), 2000-strlen(string), "Pos Target:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionTarget, motor_control[1].positionTarget, motor_control[2].positionTarget, motor_control[3].positionTarget);
 		snprintf(string+strlen(string), 2000-strlen(string), "Pos Actual:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionActual, motor_control[1].positionActual, motor_control[2].positionActual, motor_control[3].positionActual);
-		snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-		// snprintf(string+strlen(string), 2000-strlen(string), "TorqueTarget C:    % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].torqueTarget, motor_control[1].torqueTarget, motor_control[2].torqueTarget, motor_control[3].torqueTarget);
-		// snprintf(string+strlen(string), 2000-strlen(string), "TorqueTarget M:    %ld  %ld  %ld  %ld\n", motor_data[0].torqueTarget, motor_data[1].torqueTarget, motor_data[2].torqueTarget, motor_data[3].torqueTarget);
-		// snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+        snprintf(string+strlen(string), 2000-strlen(string), "Error:       % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionError, motor_control[1].positionError, motor_control[2].positionError, motor_control[3].positionError);
+        snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
 		HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
 #endif
 	} // end of: if(systick_counter_3 >= 200) //5Hz
+
+
+
+
+	/* -------------------------------------------------------------------------  */
+
+	if (systick_counter) //1ms
+	{
+		systick_counter = 0;
+
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
+
+		for(i=2; i<4; i++) motor_data[i].torqueActual   = tmc4671_getActualTorque_raw(i);
+		for(i=2; i<4; i++) motor_data[i].positionActual = tmc4671_getActualPosition(i);
+		for(i=2; i<4; i++) motor_data[i].velocityActual = tmc4671_getActualVelocity(i);
+
+		for(i=0; i<4; i++) motor_control[i].positionActual = (float)motor_data[i].positionActual;
+		for(i=0; i<4; i++) motor_control[i].velocityActual = (float)motor_data[i].velocityActual;
+
+
+
+		if (mode == MODE_STOP)
+		{
+			for(i=0; i<4; i++) motor_control[i].torqueTarget = 0;
+			for (i = 2; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
+		}
+		else if(mode == MODE_IDLE)
+		{
+		}
+		else if (mode == MODE_TORQUE)
+		{
+			for(i=0; i<4; i++) motor_data[i].torqueTarget = (int32_t)(motor_control[i].torqueTarget);
+			for(i=2; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
+		}
+		else if (mode == MODE_POSITION || mode == MODE_RCCONTROL)
+		{
+			for (i = 0; i < 4; i++) positionPI(i);
+			for (i = 0; i < 4; i++) velocityPI(i);
+
+			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = (int32_t)motor_control[i].torqueTarget;
+			for(i=2; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
+		}
+		else if(mode == MODE_POSITION_STEP)
+		{
+			if(sweep.k == 0)
+			{
+				for(i=0; i<4; i++) motor_control[i].angleIn = 0;
+			}
+			else if(sweep.k == 500)
+			{
+				if(sweep.mode == JMP_FLP)
+				{
+					motor_control[0].angleIn = 0;
+					motor_control[1].angleIn = 0;
+					motor_control[2].angleIn = 0;
+					motor_control[3].angleIn = sweep.U;
+				}
+				else if(sweep.mode == JMP_AIL)
+				{
+					motor_control[0].angleIn = 0;
+					motor_control[1].angleIn = 0;
+					motor_control[2].angleIn = sweep.U;
+					motor_control[3].angleIn = 0;
+				}
+			}
+			else if(sweep.k == 1500)
+			{
+				for(i=0; i<4; i++) motor_control[i].angleIn = 0;
+			}
+			else if(sweep.k >= (DATA_N-1) ) // stop
+			{
+				for(i=0; i<4; i++) motor_control[i].angleIn = 0;
+				stats = true;
+				mode = MODE_POSITION;
+				#if MATLAB
+					snprintf(string, 200, 	"fintest\n");
+					HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
+				#endif
+			}
+			for(i=0; i<4; i++) motor_control[i].positionTarget = clacAngle(i);
+
+			for (i = 0; i < 4; i++) positionPI(i);
+			for (i = 0; i < 4; i++) velocityPI(i);
+			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = (int32_t)motor_control[i].torqueTarget;
+			for(i=2; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
+
+			for (i = 2; i < 4; i++) data1[sweep.k].torqueTarget[i-2] = (int32_t)motor_data[i].torqueTarget;
+			for (i = 2; i < 4; i++) data1[sweep.k].torqueActual[i-2] = (int32_t)motor_data[i].torqueActual;
+			for (i = 2; i < 4; i++) data1[sweep.k].velocityActual[i-2] = (int32_t)motor_control[i].velocityActual;
+			for (i = 2; i < 4; i++) data1[sweep.k].velocityTarget[i-2] = (int32_t)motor_control[i].velocityTarget;
+			for (i = 2; i < 4; i++) data1[sweep.k].velocityIntegratorValue[i-2] = (int32_t)motor_control[i].velocityIntegratorValue;
+
+			for (i = 2; i < 4; i++) data1[sweep.k].positionActual[i-2] = (int32_t)motor_control[i].positionActual;
+			for (i = 2; i < 4; i++) data1[sweep.k].positionTarget[i-2] = (int32_t)motor_control[i].positionTarget;
+			for (i = 2; i < 4; i++) data1[sweep.k].positionIntegratorValue[i-2] = (int32_t)motor_control[i].positionIntegratorValue;
+			sweep.k++;
+
+		}
+        else if(mode == MODE_POSITION_SWEEP || mode == MODE_POSITION_SWEEP2)
+		{
+            sweep.t = sweep.k * sweep.Ta;
+    		sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
+    		sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
+
+            if(mode == MODE_POSITION_SWEEP && sweep.mode == JMP_FLP)
+            {
+                motor_control[0].angleIn = 0;
+                motor_control[1].angleIn = 0;
+                motor_control[2].angleIn = 0;
+                motor_control[3].angleIn = sweep.out;
+            }
+            else if(mode == MODE_POSITION_SWEEP && sweep.mode == JMP_AIL)
+            {
+                motor_control[0].angleIn = 0;
+                motor_control[1].angleIn = 0;
+                motor_control[2].angleIn = sweep.out;
+                motor_control[3].angleIn = 0;
+            }
+			else if(mode == MODE_POSITION_SWEEP2 && sweep.mode == JMP_AIL)
+			{
+				motor_control[0].angleIn = 0;
+				motor_control[1].angleIn = 0;
+				motor_control[2].angleIn = 0;
+				motor_control[3].angleIn = 0;
+			}
+
+            for(i=0; i<4; i++) motor_control[i].positionTarget = clacAngle(i);
+
+
+
+			for (i = 0; i < 4; i++) positionPI(i);
+			for (i = 0; i < 4; i++) velocityPI(i);
+			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = (int32_t)motor_control[i].torqueTarget;
+
+
+			if(mode == MODE_POSITION_SWEEP2 && sweep.mode == JMP_AIL)
+			{
+				//motor_data[2].torqueTarget = motor_data[2].torqueTarget + (int32_t)sweep.out;
+				motor_data[2].torqueTarget = (int32_t)(sweep.out);
+				//motor_data[3].torqueTarget = (int32_t)0;
+			}
+
+
+			for(i=2; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
+
+			for (i = 2; i < 4; i++) data1[sweep.k].torqueTarget[i-2] = (int32_t)motor_data[i].torqueTarget;
+			for (i = 2; i < 4; i++) data1[sweep.k].torqueActual[i-2] = (int32_t)motor_data[i].torqueActual;
+			for (i = 2; i < 4; i++) data1[sweep.k].velocityActual[i-2] = (int32_t)motor_control[i].velocityActual;
+			for (i = 2; i < 4; i++) data1[sweep.k].velocityTarget[i-2] = (int32_t)motor_control[i].velocityTarget;
+			for (i = 2; i < 4; i++) data1[sweep.k].velocityIntegratorValue[i-2] = (int32_t)motor_control[i].velocityIntegratorValue;
+
+			for (i = 2; i < 4; i++) data1[sweep.k].positionActual[i-2] = (int32_t)motor_control[i].positionActual;
+			for (i = 2; i < 4; i++) data1[sweep.k].positionTarget[i-2] = (int32_t)motor_control[i].positionTarget;
+			for (i = 2; i < 4; i++) data1[sweep.k].positionIntegratorValue[i-2] = (int32_t)motor_control[i].positionIntegratorValue;
+
+
+			if(sweep.k >= (DATA_N-1) ) // stop
+            {
+                for(i=0; i<4; i++) motor_control[i].angleIn = 0;
+                mode = MODE_STOP;
+                stats = true;
+
+                #if MATLAB
+                    snprintf(string, 200, 	"fintest\n");
+                    HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
+                #endif
+
+            }
+
+
+			sweep.k++;
+
+		}
+		else if(mode == MODE_CONTROL_TEST)
+		{
+            sweep.t = sweep.k * sweep.Ta;
+    		sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
+    		sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t + (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
+
+			 for (i = 0; i < 4; i++) motor_control[i].velocityTarget = sweep.out;
+			 for (i = 0; i < 4; i++) motor_control[i].velocityActual = 0;
+
+
+			for (i = 0; i < 4; i++) velocityPICompensation(i);
+
+
+			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = (int32_t)motor_control[i].torqueTarget;
+			for (i = 2; i < 4; i++) data2[sweep.k].torqueTarget[i-2]    = motor_control[i].torqueTarget;
+			for (i = 2; i < 4; i++) data2[sweep.k].velocityActual[i-2] = motor_control[i].velocityActual;
+			for (i = 2; i < 4; i++) data2[sweep.k].velocityTarget[i-2] = motor_control[i].velocityTarget;
+
+			if(sweep.k >= (DATA_N-1) ) // stop
+            {
+                mode = MODE_STOP;
+                stats = true;
+
+                #if MATLAB
+                    snprintf(string, 200, 	"fintest\n");
+                    HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
+                #endif
+
+            }
+
+
+			sweep.k++;
+
+		}
+
+
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0);
+	}
+
 
 	/* -------------------------------------------------------------------------  */
 	if (rx_byte_new)
@@ -340,66 +519,147 @@ void logic_loop(void)
 			stats = true;
 			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
 			break;
-
-		case '1':
-			mode = MODE_TORQUE;
-			motor_control[0].torqueTarget = 0;
-			motor_control[1].torqueTarget = 0;
-			motor_control[2].torqueTarget = 0;
-			motor_control[3].torqueTarget = 2000;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
+		case 'm':
+			mode = MODE_IDLE;
+			stats = true;
+			//for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
 			break;
+
+		// case '1':
+		// 	mode = MODE_TORQUE;
+		// 	motor_control[0].torqueTarget = 0;
+		// 	motor_control[1].torqueTarget = 0;
+		// 	motor_control[2].torqueTarget = 0;
+		// 	motor_control[3].torqueTarget = 2000;
+		// 	for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
+		// 	break;
 
 		case '2':
 			mode = MODE_POSITION;
-			//for(i=2; i<4; i++) tmc4671_writeInt(i, TMC4671_PID_POSITION_ACTUAL, 0);
-			// stats = false;
 			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
 			for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
 			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
-			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 5000;
-			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
-			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
-			motor_control[0].positionTarget = 0;
-			motor_control[1].positionTarget = 0;
-			motor_control[2].positionTarget = 15;
-			motor_control[3].positionTarget = 0;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			// for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
-			break;
-
-		case '3':
-			mode = MODE_POSITION;
-			//for(i=2; i<4; i++) tmc4671_writeInt(i, TMC4671_PID_POSITION_ACTUAL, 0);
-			// stats = false;
-			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
-			for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
-			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
-			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 5000;
+			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 15000;
 			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
 			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
 			motor_control[0].positionTarget = 0;
 			motor_control[1].positionTarget = 0;
 			motor_control[2].positionTarget = 0;
-			motor_control[3].positionTarget = 15;
+			motor_control[3].positionTarget = 0;
 			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			// for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
+			break;
+
+		case '3':
+			sweep.k = 0;
+			sweep.U = 7;
+			sweep.mode = JMP_AIL;
+			stats = false;
+            if(mode==MODE_STOP)
+            {
+    			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 15000;
+    			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
+            }
+            mode = MODE_POSITION_STEP;
+			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
 			break;
 
 		case '4':
-			mode = MODE_POSITION;
-			//for(i=2; i<4; i++) tmc4671_writeInt(i, TMC4671_PID_POSITION_ACTUAL, 0);
-			// stats = false;
-			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
-			for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
-			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
-			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 5000;
-			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
-			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
-			for (i = 0; i < 4; i++) motor_control[i].positionTarget = 0;
+
+			sweep.k = 0;
+			sweep.U = 5;
+			sweep.mode = JMP_FLP;
+			stats = false;
+            if(mode==MODE_STOP)
+            {
+    			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 15000;
+    			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
+            }
+            mode = MODE_POSITION_STEP;
 			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			// for (i = 0; i < 4; i++) tmc4671_switchToMotion40 Mode(i, TMC4671_MOTION_MODE_STOPPED);
 			break;
+
+		case '5':
+			sweep.k = 0;
+			sweep.U = 10;
+            sweep.mode = JMP_AIL;
+			stats = false;
+            if(mode==MODE_STOP)
+            {
+    			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 15000;
+    			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
+            }
+            mode = MODE_POSITION_SWEEP;
+			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
+			break;
+
+        case '6':
+			sweep.k = 0;
+			sweep.U = 3;
+            sweep.mode = JMP_FLP;
+			stats = false;
+            if(mode==MODE_STOP)
+            {
+    			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 15000;
+    			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
+    			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
+            }
+            mode = MODE_POSITION_SWEEP;
+			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
+			break;
+
+		case '7':
+			sweep.k = 0;
+			sweep.omegaStart = 2 * M_PI * 1,
+			sweep.omegaEnd = 2 * M_PI * 20,
+			sweep.U = 5000;
+			sweep.mode = JMP_AIL;
+			stats = false;
+			if(mode==MODE_STOP)
+			{
+				for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
+				for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
+				for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
+				for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 15000;
+				for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
+				for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
+			}
+			mode = MODE_POSITION_SWEEP2;
+			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
+			break;
+
+		case '8':
+			sweep.k = 0;
+			sweep.omegaStart = 2 * M_PI * 0.5,
+			sweep.omegaEnd = 2 * M_PI *500,
+			sweep.U = 1;
+			uint8_t j = 0;
+			for (i = 0; i < 4; i++)
+			{
+				for (j = 0; j < ORDER; j++)
+					motor_control[i].x[j] = 0;
+			}
+
+			stats = false;
+			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
+			mode = MODE_CONTROL_TEST;
+			break;
+
+
 
 
 		case '9':
@@ -407,7 +667,7 @@ void logic_loop(void)
 			for (i = 0; i < 4; i++) motor_data[i].torqueTarget = 0;
 			for (i = 0; i < 4; i++) motor_control[i].velocityTarget = 0;
 			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorValue = 0;
-			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 5000;
+			for (i = 0; i < 4; i++) motor_control[i].velocityIntegratorLimit = 15000;
 			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorValue = 0;
 			for (i = 0; i < 4; i++) motor_control[i].positionIntegratorLimit = 5000;
 			for (i = 0; i < 4; i++) motor_control[i].positionTarget = 0;
@@ -461,15 +721,15 @@ void logic_loop(void)
 
 
 		case 'r':
-			motor_control[0].positionP += 0.1;
-			motor_control[2].positionP += 0.1;
+			motor_control[0].positionP += 0.01;
+			motor_control[2].positionP += 0.01;
 			break;
 
 		case 'f':
-			if (motor_control[0].positionP >= 0.1)
+			if (motor_control[0].positionP >= 0.01)
 			{
-				motor_control[0].positionP -= 0.1;
-				motor_control[2].positionP -= 0.1;
+				motor_control[0].positionP -= 0.01;
+				motor_control[2].positionP -= 0.01;
 			}
 			else
 			{
@@ -479,15 +739,15 @@ void logic_loop(void)
 			break;
 
 		case 't':
-			motor_control[0].positionI += 1.0;
-			motor_control[2].positionI += 1.0;
+			motor_control[0].positionI += 0.1;
+			motor_control[2].positionI += 0.1;
 			break;
 
 		case 'g':
-			if (motor_control[0].positionI >= 1.0)
+			if (motor_control[0].positionI >= 0.1)
 			{
-				motor_control[0].positionI -= 1.0;
-				motor_control[2].positionI -= 1.0;
+				motor_control[0].positionI -= 0.1;
+				motor_control[2].positionI -= 0.1;
 			}
 			else
 			{
@@ -536,15 +796,15 @@ void logic_loop(void)
 
 
 		case 'i':
-			motor_control[1].positionP += 0.1;
-			motor_control[3].positionP += 0.1;
+			motor_control[1].positionP += 0.01;
+			motor_control[3].positionP += 0.01;
 			break;
 
 		case 'k':
-			if (motor_control[1].positionP >= 0.1)
+			if (motor_control[1].positionP >= 0.01)
 			{
-				motor_control[1].positionP -= 0.1;
-				motor_control[3].positionP -= 0.1;
+				motor_control[1].positionP -= 0.01;
+				motor_control[3].positionP -= 0.01;
 			}
 			else
 			{
@@ -554,15 +814,15 @@ void logic_loop(void)
 			break;
 
 		case 'o':
-			motor_control[1].positionI += 1.0;
-			motor_control[3].positionI += 1.0;
+			motor_control[1].positionI += 0.1;
+			motor_control[3].positionI += 0.1;
 			break;
 
 		case 'l':
-			if (motor_control[1].positionI >= 1.0)
+			if (motor_control[1].positionI >= 0.1)
 			{
-				motor_control[1].positionI -= 1.0;
-				motor_control[3].positionI -= 1.0;
+				motor_control[1].positionI -= 0.1;
+				motor_control[3].positionI -= 0.1;
 			}
 			else
 			{
@@ -573,25 +833,44 @@ void logic_loop(void)
 
 
 		case 'x': // print data
-			snprintf(string, 1500, "%s", clear_string);
-			HAL_UART_Transmit_IT(&huart3, (uint8_t*) string, strlen(string));
-			HAL_Delay(2);
-
 			for (i = 0; i < DATA_N; i++)
 			{
-				snprintf(string, 1500, "%ld;", i);
-				snprintf(string + strlen(string), 1500 - strlen(string), "%d;", data1[i].torqueTarget[2]);
-				snprintf(string + strlen(string), 1500 - strlen(string), "%d;", data1[i].torqueActual[2]);
-				snprintf(string + strlen(string), 1500 - strlen(string), "%ld;", data1[i].velocityActual[2]);
-				snprintf(string + strlen(string), 1500 - strlen(string), "%ld;", data1[i].velocityTarget[2]);
-				snprintf(string + strlen(string), 1500 - strlen(string), "%ld\n", data1[i].velocityIntegratorValue[2]);
-				HAL_UART_Transmit_IT(&huart3, (uint8_t*) string, strlen(string));
+                //snprintf(string, 1500, "%ld\n", i);
+				print_data((int32_t)i,   							(uint8_t*)(data));
+				print_data(data1[i].torqueTarget[0], 				(uint8_t*)(data)+4*1);
+				print_data(data1[i].torqueActual[0],  				(uint8_t*)(data)+4*2);
+				print_data(data1[i].velocityTarget[0],   			(uint8_t*)(data)+4*3);
+				print_data(data1[i].velocityActual[0],  			(uint8_t*)(data)+4*4);
+				print_data(data1[i].velocityIntegratorValue[0],   	(uint8_t*)(data)+4*5);
+				print_data(data1[i].positionTarget[0],  			(uint8_t*)(data)+4*6);
+				print_data(data1[i].positionActual[0],   			(uint8_t*)(data)+4*7);
+				print_data(data1[i].positionIntegratorValue[0],  	(uint8_t*)(data)+4*8);
+				print_data(data1[i].torqueTarget[1], 				(uint8_t*)(data)+4*9);
+				print_data(data1[i].torqueActual[1],  				(uint8_t*)(data)+4*10);
+				print_data(data1[i].velocityTarget[1],   			(uint8_t*)(data)+4*11);
+				print_data(data1[i].velocityActual[1],  			(uint8_t*)(data)+4*12);
+				print_data(data1[i].velocityIntegratorValue[1],   	(uint8_t*)(data)+4*13);
+				print_data(data1[i].positionTarget[1],  			(uint8_t*)(data)+4*14);
+				print_data(data1[i].positionActual[1],   			(uint8_t*)(data)+4*15);
+				print_data(data1[i].positionIntegratorValue[1],  	(uint8_t*)(data)+4*16);
+				HAL_UART_Transmit_IT(&huart3, (uint8_t*)data, 4*17);
 				HAL_Delay(2);
 			}
-#if MATLAB
-			snprintf(string, 200, "finplot\n");
-			HAL_UART_Transmit_IT(&huart3, (uint8_t*) string, strlen(string));
-#endif
+            HAL_Delay(1);
+			break;
+
+		case 'v': // print data
+			for (i = 0; i < DATA_N; i++)
+			{
+				//snprintf(string, 1500, "%ld\n", i);
+				print_data2((float)i,   							    (uint8_t*)(data));
+				print_data2(data2[i].torqueTarget[0], 				(uint8_t*)(data)+4*1);
+				print_data2(data2[i].velocityTarget[0],   			(uint8_t*)(data)+4*2);
+				print_data2(data2[i].velocityActual[0],  			(uint8_t*)(data)+4*3);
+				HAL_UART_Transmit_IT(&huart3, (uint8_t*)data, 4*4);
+				HAL_Delay(1);
+			}
+			HAL_Delay(1);
 			break;
 
 		case 'y':
@@ -601,22 +880,26 @@ void logic_loop(void)
 			//snprintf(string+strlen(string), 1500, "%s",  TMC4671_highLevel_getStatus(1));
 			snprintf(string + strlen(string), 1500, "%s", TMC4671_highLevel_getStatus(2));
 			snprintf(string + strlen(string), 1500, "%s", TMC4671_highLevel_getStatus(3));
-			snprintf(string+strlen(string), 1500-strlen(string), "Twist\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "Velocity P      %.1f\n", motor_control[2].velocityP);
-			snprintf(string+strlen(string), 1500-strlen(string), "Velocity I      %.1f\n", motor_control[2].velocityI);
-			snprintf(string+strlen(string), 1500-strlen(string), "Position P      %.1f\n", motor_control[2].positionP);
-			snprintf(string+strlen(string), 1500-strlen(string), "Position I      %.1f\n", motor_control[2].positionI);
-			snprintf(string+strlen(string), 1500-strlen(string), "Position Error  %.1f\n", motor_control[2].positionError);
-			snprintf(string+strlen(string), 1500-strlen(string), "Velocity Error  %.1f\n", motor_control[2].velocityError);
+			snprintf(string+strlen(string), 1500-strlen(string), "Outer\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "Velocity P      %.2f\n", motor_control[2].velocityP);
+			snprintf(string+strlen(string), 1500-strlen(string), "Velocity I      %.2f\n", motor_control[2].velocityI);
+			snprintf(string+strlen(string), 1500-strlen(string), "Position P      %.2f\n", motor_control[2].positionP);
+			snprintf(string+strlen(string), 1500-strlen(string), "Position I      %.2f\n", motor_control[2].positionI);
+			// snprintf(string+strlen(string), 1500-strlen(string), "Position Error  %.1f\n", motor_control[2].positionError);
+			// snprintf(string+strlen(string), 1500-strlen(string), "Velocity Error  %.1f\n", motor_control[2].velocityError);
 			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "Rotate\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "Velocity P      %.1f\n", motor_control[3].velocityP);
-			snprintf(string+strlen(string), 1500-strlen(string), "Velocity I      %.1f\n", motor_control[3].velocityI);
-			snprintf(string+strlen(string), 1500-strlen(string), "Position P      %.1f\n", motor_control[3].positionP);
-			snprintf(string+strlen(string), 1500-strlen(string), "Position I      %.1f\n", motor_control[3].positionI);
-			snprintf(string+strlen(string), 1500-strlen(string), "Position Error  %.1f\n", motor_control[3].positionError);
-			snprintf(string+strlen(string), 1500-strlen(string), "Velocity Error  %.1f\n", motor_control[3].velocityError);
+			snprintf(string+strlen(string), 1500-strlen(string), "Inner\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "Velocity P      %.2f\n", motor_control[3].velocityP);
+			snprintf(string+strlen(string), 1500-strlen(string), "Velocity I      %.2f\n", motor_control[3].velocityI);
+			snprintf(string+strlen(string), 1500-strlen(string), "Position P      %.2f\n", motor_control[3].positionP);
+			snprintf(string+strlen(string), 1500-strlen(string), "Position I      %.2f\n", motor_control[3].positionI);
+			// snprintf(string+strlen(string), 1500-strlen(string), "Position Error  %.1f\n", motor_control[3].positionError);
+			// snprintf(string+strlen(string), 1500-strlen(string), "Velocity Error  %.1f\n", motor_control[3].velocityError);
 			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
+            snprintf(string+strlen(string), 1500-strlen(string), "Pos Target:  % 2.1f  % 2.1f\n", motor_control[2].positionTarget, motor_control[3].positionTarget);
+            snprintf(string+strlen(string), 1500-strlen(string), "Pos Actual:  % 2.1f  % 2.1f\n", motor_control[2].positionActual, motor_control[3].positionActual);
+            snprintf(string+strlen(string), 1500-strlen(string), "Error:       % 2.1f  % 2.1f\n", motor_control[2].positionError,  motor_control[3].positionError );
+            snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
 //			snprintf(string + strlen(string), 1500, "enc0: %5d\tenc1: %5d\tenc2: %5d\tenc3: %5d\n", angle[0], angle[1], angle[2], angle[3]);
 			// snprintf(string + strlen(string), 1500, "[o] ... stopped mode\n[p] ... position mode\n[SPACE] ... STOP\n");
 			snprintf(string + strlen(string), 1500, "finstats\n");
@@ -684,61 +967,6 @@ int32_t clacAngle(uint8_t drv)
 
 
 
-float calcTorque(uint8_t drv, float angleAlpha, float torqueAlpha)
-{
-	static float torqueBeta = 0;
-	static float angleAlphaSat = 0;
-
-	/*
-	torqueBeta(torqueAlpha, angleAlpha)
-	is convex and well defined for angleAlpha =-100..100
-	*/
-
-	if(angleAlpha > 50.0)
-		angleAlphaSat = 50.0;
-	else if(angleAlpha < -50.0)
-		angleAlphaSat = -50.0;
-	else
-		angleAlphaSat = angleAlpha;
-
-
-	if(drv == 0)
-	{
-		torqueBeta = torqueAlpha/2;
-	}
-	else if (drv == 2)
-	{
-		torqueBeta = torqueAlpha/2;
-	}
-	if(drv == 1)
-	{
-		angleAlphaSat = -angleAlphaSat;
-		torqueBeta = torqueAlpha*
-			(0.194852609015931322e0
-			+ angleAlphaSat * (-0.217758117033939151e-3)
-			+ angleAlphaSat * angleAlphaSat * 0.225298149350079040e-3
-			+ pow(angleAlphaSat, 3) * 0.571754382667929612e-6
-			+ pow(angleAlphaSat, 4) * (-0.281179358438909426e-6)
-			+ pow(angleAlphaSat, 4) * (-0.210702833388430834e-8)
-			+ pow(angleAlphaSat, 6) * 0.291589620920940693e-9
-			+ pow(angleAlphaSat, 7) * 0.210820574656015764e-11);
-	}
-	if(drv == 3)
-	{
-		torqueBeta = torqueAlpha*
-			(0.194852609015931322e0
-			+ angleAlphaSat * (-0.217758117033939151e-3)
-			+ angleAlphaSat * angleAlphaSat * 0.225298149350079040e-3
-			+ pow(angleAlphaSat, 3) * 0.571754382667929612e-6
-			+ pow(angleAlphaSat, 4) * (-0.281179358438909426e-6)
-			+ pow(angleAlphaSat, 4) * (-0.210702833388430834e-8)
-			+ pow(angleAlphaSat, 6) * 0.291589620920940693e-9
-			+ pow(angleAlphaSat, 7) * 0.210820574656015764e-11);
-	}
-	return torqueBeta;
-
-
-}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -837,6 +1065,54 @@ float sat(float x)
 		return x;
 }
 
+
+void velocityPICompensation(uint8_t drv)
+{
+	uint8_t i = 0;
+	uint8_t j = 0;
+
+	static float A[ORDER][ORDER] =
+	{
+		{1.8782,   -0.8819},
+    	{1.0000,         0}
+	};
+
+	static float B[ORDER] =
+	{
+		0.0625,
+		0
+	};
+
+	static float C[ORDER] =
+	{
+		0.0303,    0.0290
+	};
+
+	static float D = 0;
+
+	motor_control[drv].velocityError = motor_control[drv].velocityTarget - motor_control[drv].velocityActual;
+
+	motor_control[drv].torqueTarget = 0;
+	for (i = 0; i < ORDER; i++)
+		motor_control[drv].torqueTarget += C[i] * motor_control[drv].x[i];
+
+	motor_control[drv].torqueTarget += D * motor_control[drv].velocityError;
+
+	for (i = 0; i < ORDER; i++)
+	{
+		motor_control[drv].x_[i] = 0;
+		for (j = 0; j < ORDER; j++)
+			motor_control[drv].x_[i] += A[i][j] * motor_control[drv].x[j];
+
+		motor_control[drv].x_[i] += B[i]* motor_control[drv].velocityError;
+	}
+
+	for (i = 0; i < ORDER; i++)
+		motor_control[drv].x[i] = motor_control[drv].x_[i];
+}
+
+
+
 void velocityPI(uint8_t drv)
 {
 	motor_control[drv].velocityError = motor_control[drv].velocityTarget - motor_control[drv].velocityActual;
@@ -895,4 +1171,44 @@ void positionPI(uint8_t drv)
 		motor_control[drv].positionIntegratorValue = motor_control[drv].positionIntegratorValue + TA * (float) motor_control[drv].positionError;
 	}
 
+}
+
+void print_data(int32_t data , uint8_t* string)
+{
+	string[0] = (data & 0x000000ff)        ;
+	string[1] = ((data & 0x0000ff00) >> 8 );
+	string[2] = ((data & 0x00ff0000) >> 16);
+	string[3] = ((data & 0xff000000) >> 24);
+}
+
+// void print_data2(float data , uint8_t* string)
+// {
+// 	static union {
+// 	    float data_float;
+// 	    uint32_t data_int32_t;
+// 	  } thing;
+//
+// 	thing.data_float = data;
+//
+// 	string[0] = ( thing.data_int32_t & 0x000000ff)        ;
+// 	string[1] = ((thing.data_int32_t & 0x0000ff00) >> 8 );
+// 	string[2] = ((thing.data_int32_t & 0x00ff0000) >> 16);
+// 	string[3] = ((thing.data_int32_t & 0xff000000) >> 24);
+// }
+
+void print_data2(float data , uint8_t* string)
+{
+	union {
+	    float data_float;
+	    uint8_t bytes[4];
+	  } thing;
+
+	thing.data_float = data;
+
+	memcpy(string, thing.bytes, 4);
+
+	// string[0] = ( thing.data_int32_t & 0x000000ff)        ;
+	// string[1] = ((thing.data_int32_t & 0x0000ff00) >> 8 );
+	// string[2] = ((thing.data_int32_t & 0x00ff0000) >> 16);
+	// string[3] = ((thing.data_int32_t & 0xff000000) >> 24);
 }
