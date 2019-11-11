@@ -82,6 +82,9 @@ void logic_init(void)
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 	HAL_Delay(500);
 
+	for (i = 0; i < 4; i++) spiSpeedSlow_set(i);
+	HAL_Delay(10);
+
 	for (i = 0; i < 4; i++) tmc6200_highLevel_init(i);
 	HAL_Delay(10);
 
@@ -95,7 +98,10 @@ void logic_init(void)
 
 	for (i = 0; i < 4; i++) as5047U_setABIResolution14Bit(i); //FIXME
 	for (i = 0; i < 4; i++) TMC4671_highLevel_stoppedMode(i);
-	// for(i=0; i<4; i++) 	TMC4671_highLevel_pwmOff(i);
+
+	HAL_Delay(10);
+	for (i = 0; i < 4; i++) spiSpeedSlow_reset(i);
+	HAL_Delay(10);
 
 	//TMC4671_highLevel_openLoopTest2(2, 120);
 
@@ -281,7 +287,7 @@ void logic_loop(void)
 
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
 
-		for(i=2; i<4; i++) motor_data[i].torqueActual   = tmc4671_getActualTorque_raw(i);
+		// for(i=2; i<4; i++) motor_data[i].torqueActual   = tmc4671_getActualTorque_raw(i);
 		for(i=2; i<4; i++) motor_data[i].positionActual = tmc4671_getActualPosition(i);
 		for(i=2; i<4; i++) motor_data[i].velocityActual = tmc4671_getActualVelocity(i);
 

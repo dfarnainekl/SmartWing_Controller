@@ -2,7 +2,7 @@
 #include "swdriver.h"
 #include "spi.h"
 
-static void spiSpeedSlow_set(uint8_t drv)
+void spiSpeedSlow_set(uint8_t drv)
 {
 	swdriver[drv].SPI->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
 
@@ -13,9 +13,9 @@ static void spiSpeedSlow_set(uint8_t drv)
 	HAL_Delay(1);
 }
 
-static void spiSpeedSlow_reset(uint8_t drv)
+void spiSpeedSlow_reset(uint8_t drv)
 {
-	swdriver[drv].SPI->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+	swdriver[drv].SPI->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
 
 	if (HAL_SPI_Init(swdriver[drv].SPI) != HAL_OK)
 	{
