@@ -4,7 +4,8 @@
 #include "stm32h7xx_hal.h"
 
 #define ANGLE_MAX_ALPHA_DEGREE 	20.0
-#define ORDER 2
+#define ORDER_VEL_FILT 8
+#define ORDER_POS_FILT 2
 
 typedef enum
 {
@@ -19,7 +20,7 @@ typedef struct sweep_s
 	float omegaStart;
 	float omegaEnd;
 	char string[200];
-	uint16_t len;
+	uint32_t len;
 	uint32_t k;
 	float r;
 	float t;
@@ -42,9 +43,11 @@ typedef struct data1_s
 
 typedef struct data2_s
 {
-	float torqueTarget[2];
-	float velocityActual[2];
-	float velocityTarget[2];
+	float torqueTarget;
+	float velocityActual;
+	float velocityTarget;
+	float positionActual;
+	float positionTarget;
 } data2_t;
 
 typedef struct control_s
@@ -53,26 +56,33 @@ typedef struct control_s
 	float angleOut;
 
 	float torqueTarget;
-	float x[ORDER];
-	float x_[ORDER];
-
-
+	float torqueTarget_Limited;
 
 	float velocityTarget;
 	float velocityActual;
-	float velocityI;
-	float velocityP;
-	float velocityIntegratorValue;
-	float velocityIntegratorLimit;
 	float velocityError;
+	float velocityIntegratorValue;
+	float bq_intermediate1;
+	float bq_intermediate2;
+	float bq_intermediate3;
+	float bq_vel_delay1[2];
+	float bq_vel_delay2[2];
+	float bq_vel_delay3[2];
+	float bq_vel_delay4[2];
 
 	float positionTarget;
 	float positionActual;
+	float positionError;
+	float bq_pos_delay1[2];
+
+	//old:
+	float velocityI;
+	float velocityP;
+	float velocityIntegratorLimit;
 	float positionI;
 	float positionP;
-	float positionIntegratorValue;
 	float positionIntegratorLimit;
-	float positionError;
+	float positionIntegratorValue;
 } control_t;
 
 typedef struct motor_s
@@ -94,9 +104,16 @@ float sat(float x);
 
 void positionPI(uint8_t drv);
 void velocityPI(uint8_t drv);
+// void velocityPICompensation(uint8_t drv);
+// void positionPICompensation(uint8_t drv);
+void positionPICompensation(uint8_t drv);
 void velocityPICompensation(uint8_t drv);
 
-int32_t clacAngle(uint8_t drv);
-float calcTorque(uint8_t drv, float angleAlpha, float torqueAlpha);
+float biquad(float in, float* coeffs, float gain, float* w_);
+
+int32_t calcAngleTarget(uint8_t drv);
+float calcAngleBetaAlpha(uint8_t drv, float angleBeta);
+float clacAngleVelocityBetaAlpha(uint8_t drv, float angleBeta, float velocityBeta);
+float calcTorqueAlphaBeta(uint8_t drv, float angleAlpha, float torqueAlpha);
 
 #endif /* LOGIC_H_ */

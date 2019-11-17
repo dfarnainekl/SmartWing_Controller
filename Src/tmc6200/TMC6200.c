@@ -15,7 +15,7 @@ void spiSpeedSlow_set(uint8_t drv)
 
 void spiSpeedSlow_reset(uint8_t drv)
 {
-	swdriver[drv].SPI->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+	swdriver[drv].SPI->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
 
 	if (HAL_SPI_Init(swdriver[drv].SPI) != HAL_OK)
 	{

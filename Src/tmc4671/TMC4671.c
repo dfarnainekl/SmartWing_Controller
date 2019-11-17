@@ -13,6 +13,12 @@
 #define STATE_WAIT_INIT_TIME   2
 #define STATE_ESTIMATE_OFFSET  3
 
+extern uint8_t txBuffer[4][5];
+extern uint8_t rxBuffer[4][5];
+extern volatile uint8_t rxSPICplt[4];
+extern volatile int32_t rxSPIData [4];
+
+
 // spi access
 int32_t tmc4671_readInt(uint8_t motor, uint8_t address)
 {
@@ -30,6 +36,24 @@ int32_t tmc4671_readInt(uint8_t motor, uint8_t address)
 	swdriver_setCsnController(motor, true);
 
 	return (int)((rxData[1] << 24) | (rxData[2] << 16) | (rxData[3] << 8) | (rxData[4] << 0));
+}
+
+void tmc4671_readInt_nonBlocking(uint8_t motor, uint8_t address)
+{
+
+	txBuffer[motor][0] = TMC_ADDRESS(address);
+	txBuffer[motor][1] = 0;
+	txBuffer[motor][2] = 0;
+	txBuffer[motor][3] = 0;
+	txBuffer[motor][4] = 0;
+
+	swdriver_setCsnController(motor, false);
+
+	HAL_SPI_TransmitReceive_IT(swdriver[motor].SPI, &txBuffer[motor][0], &rxBuffer[motor][0], 5);
+	// HAL_SPI_TransmitReceive(swdriver[motor].SPI, txData, rxData, 5, HAL_MAX_DELAY);
+	// swdriver_setCsnController(motor, true);
+
+	//return (int)((rxData[1] << 24) | (rxData[2] << 16) | (rxData[3] << 8) | (rxData[4] << 0));
 }
 
 void tmc4671_writeInt(uint8_t motor, uint8_t address, int32_t value)
@@ -59,14 +83,50 @@ void tmc4671_writeInt_nonBlocking(uint8_t motor, uint8_t address, int32_t value)
 	HAL_SPI_Transmit_IT(swdriver[motor].SPI, data, 5);
 }
 
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi) //FIXME: pfusch
+{
+	if(hspi->Instance == swdriver[0].SPI->Instance)
+	{
+		rxSPICplt[0] = 1;
+		swdriver_setCsnController(0, true);
+		// rxSPIData[0] = (int32_t)((rxBuffer[0][1] << 24) | (rxBuffer[0][2] << 16) | (rxBuffer[0][3] << 8) | (rxBuffer[0][4] << 0));
+	}
+	else if(hspi == swdriver[1].SPI)
+	{
+		rxSPICplt[1] = 1;
+		swdriver_setCsnController(1, true);
+		// rxSPIData[1] = (int32_t)((rxBuffer[1][1] << 24) | (rxBuffer[1][2] << 16) | (rxBuffer[1][3] << 8) | (rxBuffer[2][4] << 0));
+	}
+	else if(hspi == swdriver[2].SPI)
+	{
+		rxSPICplt[2] = 1;
+		swdriver_setCsnController(2, true);
+		// rxSPIData[2] = (int32_t)((rxBuffer[2][1] << 24) | (rxBuffer[2][2] << 16) | (rxBuffer[2][3] << 8) | (rxBuffer[2][4] << 0));
+	}
+	else if(hspi == swdriver[3].SPI)
+	{
+		rxSPICplt[3] = 1;
+		swdriver_setCsnController(3, true);
+		// rxSPIData[3] = (int32_t)((rxBuffer[3][1] << 24) | (rxBuffer[3][2] << 16) | (rxBuffer[3][3] << 8) | (rxBuffer[3][4] << 0));
+	}
+}
+
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) //FIXME: pfusch
 {
 	if(hspi == &hspi1)      {swdriver_setCsnController(0, true); swdriver_setCsnDriver(0, true); swdriver_setCsnEncoder(0, true);}
 	else if(hspi == &hspi2) {swdriver_setCsnController(1, true); swdriver_setCsnDriver(1, true); swdriver_setCsnEncoder(1, true);}
 	else if(hspi == &hspi3) {swdriver_setCsnController(2, true); swdriver_setCsnDriver(2, true); swdriver_setCsnEncoder(2, true);}
 	else if(hspi == &hspi4) {swdriver_setCsnController(3, true); swdriver_setCsnDriver(3, true); swdriver_setCsnEncoder(3, true);}
+
 }
 
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) //FIXME: pfusch
+{
+	if(hspi == &hspi1)      {swdriver_setCsnController(0, true); swdriver_setCsnDriver(0, true); swdriver_setCsnEncoder(0, true);}
+	else if(hspi == &hspi2) {swdriver_setCsnController(1, true); swdriver_setCsnDriver(1, true); swdriver_setCsnEncoder(1, true);}
+	else if(hspi == &hspi3) {swdriver_setCsnController(2, true); swdriver_setCsnDriver(2, true); swdriver_setCsnEncoder(2, true);}
+	else if(hspi == &hspi4) {swdriver_setCsnController(3, true); swdriver_setCsnDriver(3, true); swdriver_setCsnEncoder(3, true);}
+}
 
 uint16_t tmc4671_readRegister16BitValue(uint8_t motor, uint8_t address, uint8_t channel)
 {
