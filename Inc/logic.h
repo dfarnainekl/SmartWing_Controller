@@ -2,6 +2,21 @@
 #define LOGIC_H_
 
 #include "stm32h7xx_hal.h"
+#include <stdbool.h>
+#include <math.h>
+#include <string.h>
+
+#include "swdriver.h"
+#include "tmc6200/TMC6200.h"
+#include "tmc6200/TMC6200_highLevel.h"
+#include "tmc4671/TMC4671_highLevel.h"
+#include "tmc4671/TMC4671.h"
+#include "as5047U.h"
+#include "usart.h"
+#include "tim.h"
+#include "logic_helper.h"
+
+
 
 #define ANGLE_MAX_ALPHA_DEGREE 	20.0
 #define ORDER_VEL_FILT 8
@@ -9,7 +24,7 @@
 
 typedef enum
 {
-	AIL, FLP, JMP_AIL, JMP_FLP, SWING_INNER, SWING_OUTER
+	LOW, MID, HIGH, SINE
 } MODE;
 
 typedef struct sweep_s
@@ -30,15 +45,14 @@ typedef struct sweep_s
 
 typedef struct data1_s
 {
-	int32_t torqueActual[2];
-	int32_t torqueTarget[2];
-	int32_t velocityActual[2];
-	int32_t velocityTarget[2];
-	int32_t velocityIntegratorValue[2];
+	float torqueActual[2];
+	float torqueTarget[2];
 
-	int32_t positionActual[2];
-	int32_t positionTarget[2];
-	int32_t positionIntegratorValue[2];
+	float velocityActual[2];
+	float velocityTarget[2];
+
+	float positionActual[2];
+	float positionTarget[2];
 } data1_t;
 
 typedef struct data2_s
@@ -55,13 +69,29 @@ typedef struct control_s
 	float angleIn;
 	float angleOut;
 
-	float torqueTarget;
-	float torqueTarget_Limited;
 
-	float velocityTarget;
-	float velocityActual;
-	float velocityError;
-	float velocityIntegratorValue;
+	//alpha, beta, gamma
+	float positionActualAlpha;
+	float positionActualBeta;
+	float positionActualGamma;
+	float positionTargetGamma;
+	float positionErrorGamma;
+
+
+	float velocityActualAlpha;
+	float velocityActualBeta;
+	float velocityActualGamma;
+	float velocityTargetGamma;
+	float velocityErrorGamma;
+	float velocityIntegratorValueGamma;
+
+	float torqueTargetAlpha;
+	float torqueTargetBeta;
+	float torqueTargetGamma;
+	float torqueTargetLimitedGamma;
+
+
+	//biquads
 	float bq_intermediate1;
 	float bq_intermediate2;
 	float bq_intermediate3;
@@ -70,12 +100,10 @@ typedef struct control_s
 	float bq_vel_delay3[2];
 	float bq_vel_delay4[2];
 
-	float positionTarget;
-	float positionActual;
-	float positionError;
 	float bq_pos_delay1[2];
 
 	//old:
+
 	float velocityI;
 	float velocityP;
 	float velocityIntegratorLimit;
@@ -100,20 +128,10 @@ void logic_loop(void);
 
 void print_data(int32_t data , uint8_t* string);
 void print_data2(float data , uint8_t* string);
-float sat(float x);
 
-void positionPI(uint8_t drv);
-void velocityPI(uint8_t drv);
-// void velocityPICompensation(uint8_t drv);
-// void positionPICompensation(uint8_t drv);
 void positionPICompensation(uint8_t drv);
 void velocityPICompensation(uint8_t drv);
 
 float biquad(float in, float* coeffs, float gain, float* w_);
-
-int32_t calcAngleTarget(uint8_t drv);
-float calcAngleBetaAlpha(uint8_t drv, float angleBeta);
-float clacAngleVelocityBetaAlpha(uint8_t drv, float angleBeta, float velocityBeta);
-float calcTorqueAlphaBeta(uint8_t drv, float angleAlpha, float torqueAlpha);
 
 #endif /* LOGIC_H_ */

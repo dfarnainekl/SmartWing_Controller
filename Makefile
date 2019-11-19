@@ -70,6 +70,7 @@ Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_pwr_ex.c \
 Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal.c \
 Src/system_stm32h7xx.c \
 Src/logic.c \
+Src/logic_helper.c \
 Src/as5147.c \
 Src/as5047U.c \
 Src/tmc6200/TMC6200.c \

@@ -358,12 +358,6 @@ char* TMC4671_highLevel_getStatus(uint8_t drv)
 	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Encoder            : %d\n",  as5047U_getAngle(drv));
 	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Position           : %ld\n",  tmc4671_getActualPosition(drv));
 	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Velocity           : %ld\n",  tmc4671_getActualVelocity(drv));
-	// snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Velocity-P:   [g,t]: %d\n",  velocoty_p);
-	// snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Velocity-I:   [j,u]: %d\n",  velocoty_i);
-	// snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Position-P:   [h,z]: %d\n",  position_p);
-	// snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "Position-I:   [k,i]: %d\n",  position_i);
-//	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "I0:                  %d\n",  tmc4671_getAdcI0Offset(drv));
-//	snprintf(&string[drv][0]+strlen(&string[drv][0]), 300, "I1:                  %d\n",  tmc4671_getAdcI1Offset(drv));
 	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "---------------------------\n");
 
 	return &string[drv][0];
