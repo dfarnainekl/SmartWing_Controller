@@ -7,7 +7,7 @@
 
 #define DRV0_OFFSET_POS0			0
 #define DRV1_OFFSET_POS0			0
-#define DRV2_OFFSET_POS0			38520
+#define DRV2_OFFSET_POS0			62000
 #define DRV3_OFFSET_POS0			2080
 
 

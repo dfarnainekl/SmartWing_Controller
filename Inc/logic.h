@@ -19,12 +19,23 @@
 
 
 #define ANGLE_MAX_ALPHA_DEGREE 	20.0
-#define ORDER_VEL_FILT 8
-#define ORDER_POS_FILT 2
+
+
+#define MODE_STOP				0
+#define MODE_TORQUE				1
+#define MODE_VELOCITY			2
+#define MODE_POSITION			3
+#define MODE_RCCONTROL			4
+#define MODE_TORQUE_SWEEP		5
+#define MODE_IDLE				6
+#define MODE_CONTROL_TEST		7
+#define MODE_VELOCITY_STEP		8
+#define MODE_TORQUE_X			9
+
 
 typedef enum
 {
-	LOW, MID, HIGH, SINE
+	LOW, MID, HIGH, SINE, STEP, TEST, M2, M3, M2M3
 } MODE;
 
 typedef struct sweep_s
@@ -45,8 +56,8 @@ typedef struct sweep_s
 
 typedef struct data1_s
 {
-	float torqueActual[2];
-	float torqueTarget[2];
+	float currentActual[2];
+	float currentTarget[2];
 
 	float velocityActual[2];
 	float velocityTarget[2];
@@ -64,74 +75,11 @@ typedef struct data2_s
 	float positionTarget;
 } data2_t;
 
-typedef struct control_s
-{
-	float angleIn;
-	float angleOut;
 
-
-	//alpha, beta, gamma
-	float positionActualAlpha;
-	float positionActualBeta;
-	float positionActualGamma;
-	float positionTargetGamma;
-	float positionErrorGamma;
-
-
-	float velocityActualAlpha;
-	float velocityActualBeta;
-	float velocityActualGamma;
-	float velocityTargetGamma;
-	float velocityErrorGamma;
-	float velocityIntegratorValueGamma;
-
-	float torqueTargetAlpha;
-	float torqueTargetBeta;
-	float torqueTargetGamma;
-	float torqueTargetLimitedGamma;
-
-
-	//biquads
-	float bq_intermediate1;
-	float bq_intermediate2;
-	float bq_intermediate3;
-	float bq_vel_delay1[2];
-	float bq_vel_delay2[2];
-	float bq_vel_delay3[2];
-	float bq_vel_delay4[2];
-
-	float bq_pos_delay1[2];
-
-	//old:
-
-	float velocityI;
-	float velocityP;
-	float velocityIntegratorLimit;
-	float positionI;
-	float positionP;
-	float positionIntegratorLimit;
-	float positionIntegratorValue;
-} control_t;
-
-typedef struct motor_s
-{
-	int32_t torqueActual;		// only for logging
-	int32_t torqueTarget;		// written to tmc4671
-	int32_t velocityActual;
-	int32_t velocityTarget;		// only for logging
-	int32_t positionTarget;		// only for logging
-	int32_t positionActual;
-} motor_t;
 
 void logic_init(void);
 void logic_loop(void);
 
-void print_data(int32_t data , uint8_t* string);
-void print_data2(float data , uint8_t* string);
 
-void positionPICompensation(uint8_t drv);
-void velocityPICompensation(uint8_t drv);
-
-float biquad(float in, float* coeffs, float gain, float* w_);
 
 #endif /* LOGIC_H_ */
