@@ -23,7 +23,7 @@
 
 #define MODE_STOP				0
 #define MODE_TORQUE				1
-#define MODE_VELOCITY			2
+#define MODE_TRAJTEST			2
 #define MODE_POSITION			3
 #define MODE_RCCONTROL			4
 #define MODE_TORQUE_SWEEP		5
@@ -56,23 +56,22 @@ typedef struct sweep_s
 
 typedef struct data1_s
 {
-	float currentActual[2];
-	float currentTarget[2];
-
-	float velocityActual[2];
-	float velocityTarget[2];
-
-	float positionActual[2];
-	float positionTarget[2];
+	float phiIn[2];
+	float phi[2];
+	float alphaM[2];
+	float phiEst[2];
+	float omegaEst[2];
+	float alphaEst[2];
+	float alphaFrict[2];
+	float iq[2];
 } data1_t;
 
 typedef struct data2_s
 {
-	float torqueTarget;
-	float velocityActual;
-	float velocityTarget;
-	float positionActual;
-	float positionTarget;
+	float phiInLimited[2];
+	float phiDes[2];
+	float omegaDes[2];
+	float alphaDes[2];
 } data2_t;
 
 

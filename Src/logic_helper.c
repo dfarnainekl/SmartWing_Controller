@@ -29,26 +29,122 @@ void rateLimiterInit(limiter_t* limiter, float r, float out_)
 }
 
 
+// void disturbanceObserver(dob_t* dob, float phi, float alphaM)
+// {
+// 	dob->ePhi = phi - dob->phiEst_int;
+// 	dob->ePhi_int 			= dob->ePhi_int 		+ TA *  dob->ePhi;
+// 	dob->alphaFrict_int 	= dob->alphaFrict_int 	+ TA * (dob->ke3*dob->ePhi + dob->keI*dob->ePhi_int);
+//
+// 	dob->alphaEst = dob->ke2*dob->ePhi + dob->alphaFrict_int + alphaM;
+// 	dob->omegaEst_int 	= dob->omegaEst_int 	+ TA *  dob->alphaEst;
+// 	dob->phiEst_int 	= dob->phiEst_int 		+ TA * (dob->ke1*dob->ePhi + dob->omegaEst_int);
+// }
+
+
+// void disturbanceObserver(dob_t* dob, float phi, float alphaM, float* phiEst, float* omegaEst, float* alphaEst, float* alphaFrict, float* ePhi)
+// {
+// 	dob->ePhi = phi - dob->phiEst_int;
+// 	dob->ePhi_int 			= dob->ePhi_int 		+ TA *  dob->ePhi;
+// 	dob->alphaFrict_int 	= dob->alphaFrict_int 	+ TA * (dob->ke3*dob->ePhi + dob->keI*dob->ePhi_int);
+//
+// 	dob->alphaEst = dob->ke2*dob->ePhi + dob->alphaFrict_int + alphaM;
+// 	dob->omegaEst_int 	= dob->omegaEst_int 	+ TA *  dob->alphaEst;
+// 	dob->phiEst_int 	= dob->phiEst_int 		+ TA * (dob->ke1*dob->ePhi + dob->omegaEst_int);
+//
+// 	*phiEst 	= dob->phiEst_int;
+// 	*omegaEst 	= dob->omegaEst_int;
+// 	*alphaEst 	= dob->alphaEst;
+// 	*alphaFrict = dob->alphaFrict_int;
+// 	*ePhi 		= dob->ePhi;
+// }
+
+
+void disturbanceObserver(control_t* ctrl)
+{
+	dob_t* dob = &ctrl->dob;
+
+	dob->ePhi = ctrl->phi - dob->phiEst_int;
+	dob->ePhi_int 			= dob->ePhi_int 		+ TA *  dob->ePhi;
+	dob->alphaFrict_int 	= dob->alphaFrict_int 	+ TA * (dob->ke3*dob->ePhi + dob->keI*dob->ePhi_int);
+
+	dob->alphaEst = dob->ke2*dob->ePhi + dob->alphaFrict_int + ctrl->alphaM;
+	dob->omegaEst_int 	= dob->omegaEst_int 	+ TA *  dob->alphaEst;
+	dob->phiEst_int 	= dob->phiEst_int 		+ TA * (dob->ke1*dob->ePhi + dob->omegaEst_int);
+
+	ctrl->phiEst 		= dob->phiEst_int;
+	ctrl->omegaEst 		= dob->omegaEst_int;
+	ctrl->alphaEst 		= dob->alphaEst;
+	ctrl->alphaFrict 	= dob->alphaFrict_int;
+	ctrl->ePhi 			= dob->ePhi;
+
+
+
+	ctrl->alphaM =    ctrl->kFB0 * ( ctrl->phiDes   - ctrl->phiEst )
+					+ ctrl->kFB1 * ( ctrl->omegaDes - ctrl->omegaEst )
+					+ ctrl->alphaDes
+					- ctrl->alphaFrict;
+	ctrl->iq = ctrl->alphaM / ctrl->CmEst;
+
+	// return 	ctrl->iq;
+}
+
+
+
+void disturbanceObserverInit(control_t* ctrl, float ke1, float ke2, float ke3, float keI, float kFB0, float kFB1, float CmEst)
+{
+	dob_t* dob = &ctrl->dob;
+
+
+	dob->ePhi_int = 0;
+    dob->omegaEst_int = 0;
+    dob->phiEst_int= 0;
+    dob->alphaFrict_int = 0;
+
+	dob->ke1 = ke1;
+	dob->ke2 = ke2;
+	dob->ke3 = ke3;
+	dob->keI = keI;
+
+	ctrl->kFB0 = kFB0;
+	ctrl->kFB1 = kFB1;
+
+	ctrl->CmEst = CmEst;
+}
+
+
 
 float biquad(biquad_t* bq, float in)
 {
 	float out;
 	float w;
 
-	w = in - bq->coeff[4]*bq->w_[0] - bq->coeff[5]*bq->w_[1];
-	out = bq->coeff[0]*w + bq->coeff[1]*bq->w_[0] + bq->coeff[2]*bq->w_[1];
+	w = in - bq->a1*bq->w1 - bq->a2*bq->w2;
+	out = bq->b0*w + bq->b1*bq->w1 + bq->b2*bq->w2;
 	out *= bq->gain;
 
-	bq->w_[1] = bq->w_[0];
-	bq->w_[0] = w;
+	bq->w2 = bq->w1;
+	bq->w1 = w;
 
 	return out;
 }
 void biquadReset(biquad_t* bq)
 {
-	bq->w_[0] = 0;
-	bq->w_[1] = 0;
+	bq->w1 = 0;
+	bq->w2 = 0;
 }
+
+void biquadInit(biquad_t* bq, float gain, float b0, float b1, float b2, float a0, float a1, float a2)
+{
+	bq->gain = gain;
+	bq->b0 = b0;
+	bq->b1 = b1;
+	bq->b2 = b2;
+	bq->a1 = a0;
+	bq->a1 = a1;
+	bq->a2 = a2;
+	biquadReset(bq);
+}
+
 
 float PIDControl(pid_controller_t* pid, float e)
 {

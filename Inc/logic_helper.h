@@ -20,9 +20,9 @@
 
 typedef struct biquad_s
 {
-    float coeff[6];
+    float a0, a1, a2, b0, b1, b2;
+    float w1, w2;
     float gain;
-    float w_[2];
 } biquad_t;
 
 typedef struct pid_controller_s
@@ -52,24 +52,63 @@ typedef struct limiter_s
     float R;
 } limiter_t;
 
+typedef struct dob_s
+{
+    //intregrators
+    float ePhi_int;
+    float alphaFrict_int;
+    float omegaEst_int;
+    float phiEst_int;
+
+    float alphaEst;
+    float ePhi;
+
+    //parameters
+    float ke1;
+    float ke2;
+    float ke3;
+    float keI;
+}
+dob_t;
 
 typedef struct control_s
 {
-    float currentTargetBeta;
-    float currentActualBeta;
+    float phiIn;
+    float phiInLimited;
 
-    float velocityActualBeta;
-    float velocityTargetBeta;
-    float velocityErrorBeta;
+    //Trajectory generator
+    biquad_t bqTrajPhi;
+    biquad_t bqTrajOmega;
+    biquad_t bqTrajAlpha;
+    biquad_t bqTrajPhi1;
+    biquad_t bqTrajPhi2;
+    biquad_t bqTrajOmega1;
+    biquad_t bqPhi;
 
+    limiter_t limTrajPhi;
 
-    float positionActualBeta;
-    float positionTargetBeta;
-    float positionErrorBeta;
+    float phiDes;
+    float omegaDes;
+    float alphaDes;
 
-	//biquads
-	biquad_t bqChainVel[BQ_VEL];
-	biquad_t bqChainPos[BQ_POS];
+    //Disturbance Observer
+    float phi;
+    float alphaM;
+    dob_t dob;
+
+    float phiEst;
+    float omegaEst;
+    float alphaEst;
+    float alphaFrict;
+    float ePhi;
+
+    //feedback
+    float kFB0;
+    float kFB1;
+
+    float CmEst;
+
+    float iq;
 } control_t;
 
 typedef struct motor_s
@@ -77,8 +116,6 @@ typedef struct motor_s
 	int32_t torqueActual;		// only for logging
 	int32_t torqueTarget;		// written to tmc4671
 	int32_t velocityActual;
-	int32_t velocityTarget;		// only for logging
-	int32_t positionTarget;		// only for logging
 	int32_t positionActual;
 } motor_t;
 
@@ -86,9 +123,17 @@ typedef struct motor_s
 
 float biquad(biquad_t* bq, float in);
 void  biquadReset(biquad_t* bq);
+void  biquadInit(biquad_t* bq, float gain, float b0, float b1, float b2, float a0, float a1, float a2);
 
 float rateLimiter(limiter_t* limiter, float in);
-void rateLimiterInit(limiter_t* limiter, float r, float out_);
+void  rateLimiterInit(limiter_t* limiter, float r, float out_);
+
+// void disturbanceObserver(dob_t* dob, float phi, float alpha_M);
+// void disturbanceObserver(dob_t* dob, float phi, float alphaM, float* phiEst, float* omegaEst, float* alphaEst, float* alphaFrict, float* ePhi);
+// void disturbanceObserverInit(dob_t* dob, float ke1, float ke2, float ke3, float keI);
+void disturbanceObserverInit(control_t* ctrl, float ke1, float ke2, float ke3, float keI, float kFB0, float kFB1, float CmEst);
+void disturbanceObserver(control_t* ctrl);
+
 
 
 float PIDControl(pid_controller_t* pid, float e);

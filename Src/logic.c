@@ -37,7 +37,7 @@ uint8_t as5074uErrorCounter[4] = {0};
 
 bool stats = true;
 bool current = false;
-bool mode_matlab = 1;
+bool mode_matlab = 0;
 
 
 void logic_init(void)
@@ -168,11 +168,11 @@ void logic_loop(void)
 	static char string[1500];
 	static char clear_string[8];
 	static uint32_t i = 0;
-	static uint8_t rate = 1;
-	static uint8_t rate_old = 1;
+	// static uint8_t rate = 1;
+	// static uint8_t rate_old = 1;
 
-	static pi_controller_t piVelocity[4];
-	static pi_controller_t piPosition[4];
+	// static pi_controller_t piVelocity[4];
+	// static pi_controller_t piPosition[4];
 
 	if(mode_matlab)
 	{
@@ -205,7 +205,7 @@ void logic_loop(void)
 			angleIn[2] =   ( (float)(pwm_in[0] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 			angleIn[3] =   ( (float)(pwm_in[1] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 
-			for(i=0; i<4; i++) motor_control[i].positionTargetBeta = calcAngleTarget(i, angleIn);
+			for(i=0; i<4; i++) motor_control[i].phiIn = calcAngleTarget(i, angleIn)*M_PI/180;
 		}
 	}
 	/* -------------------------------------------------------------------------  */
@@ -222,31 +222,7 @@ void logic_loop(void)
 			snprintf(string+strlen(string), 2000-strlen(string), "pwm_in:      %d  %d  %d  %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
 			snprintf(string+strlen(string), 2000-strlen(string), "angleIn:     % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", angleIn[0], angleIn[1], angleIn[2], angleIn[3]);
 			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "Rate = %d => Ta = %1.1f\n", rate, (float)rate*TA*1000);
-			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "Beta:\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "Pos Target:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionTargetBeta, motor_control[1].positionTargetBeta, motor_control[2].positionTargetBeta, motor_control[3].positionTargetBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "Pos Actual:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].positionActualBeta, motor_control[1].positionActualBeta, motor_control[2].positionActualBeta, motor_control[3].positionActualBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "Vel Target:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].velocityTargetBeta, motor_control[1].velocityTargetBeta, motor_control[2].velocityTargetBeta, motor_control[3].velocityTargetBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "Vel Actual:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].velocityActualBeta, motor_control[1].velocityActualBeta, motor_control[2].velocityActualBeta, motor_control[3].velocityActualBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "I Target:    % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", motor_control[0].currentTargetBeta, motor_control[1].currentTargetBeta, motor_control[2].currentTargetBeta, motor_control[3].currentTargetBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "PI: Velocity 2:\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "error: % 2.1f\n", motor_control[2].velocityErrorBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "x: %f\n", piVelocity[2].x);
-			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "PI: Velocity 3:\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "error: % 2.1f\n", motor_control[3].velocityErrorBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "x: %f\n", piVelocity[3].x);
-			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "PI: Position 2:\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "error: % 2.1f\n", motor_control[2].positionErrorBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "x: %f\n", piPosition[2].x);
-			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "PI: Position 3:\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "error: % 2.1f\n", motor_control[3].positionErrorBeta);
-			snprintf(string+strlen(string), 2000-strlen(string), "x: %f\n", piPosition[3].x);
-			HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
+			HAL_UART_Transmit_IT(&huart3, (uint8_t*) string, strlen(string));
 		}
 	} // end of: if(systick_counter_3 >= 200) //5Hz
 
@@ -255,24 +231,25 @@ void logic_loop(void)
 
 	/* -------------------------------------------------------------------------  */
 
-	if (systick_counter >= rate) //Ta = rate * 500us
+	// if (systick_counter >= rate) //Ta = rate * 500us
+	if (systick_counter >= 1) //Ta = rate * 500us
 	{
 		systick_counter = 0;
 
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
 
-		for(i=2; i<4; i++) motor_data[i].torqueActual   = tmc4671_getActualTorque_raw(i);
+		// for(i=2; i<4; i++) motor_data[i].torqueActual   = tmc4671_getActualTorque_raw(i);
 		for(i=2; i<4; i++) motor_data[i].positionActual = tmc4671_getActualPosition(i);
-		for(i=2; i<4; i++) motor_data[i].velocityActual = tmc4671_getActualVelocity(i);
+		// for(i=2; i<4; i++) motor_data[i].velocityActual = tmc4671_getActualVelocity(i);
 
 		// discard wrong values!!!!!
 
 
-		for(i=2; i<4; i++) motor_control[i].currentActualBeta = (float)motor_data[i].torqueActual/500.0; 				// Ampere
-		for(i=2; i<4; i++) motor_control[i].positionActualBeta = (float)motor_data[i].positionActual/65536.0*2*M_PI; 	// rad
-		for(i=2; i<4; i++) motor_control[i].velocityActualBeta = (float)motor_data[i].velocityActual/60*2*M_PI;			// rad per s
+		//for(i=2; i<4; i++) motor_control[i].currentActualBeta = (float)motor_data[i].torqueActual/500.0; 				// Ampere
+		// for(i=2; i<4; i++) motor_control[i].positionActualBeta = (float)motor_data[i].positionActual/65536.0*2*M_PI; 	// rad
+		// for(i=2; i<4; i++) motor_control[i].velocityActualBeta = (float)motor_data[i].velocityActual/60*2*M_PI;			// rad per s
 
-
+		for(i=2; i<4; i++) motor_control[i].phi = (float)motor_data[i].positionActual/65536.0*2*M_PI; 	// rad
 
 
 		if (mode == MODE_STOP)
@@ -284,297 +261,117 @@ void logic_loop(void)
 		{
 
 		}
-		else if (mode == MODE_TORQUE_SWEEP)
+		else if(mode == MODE_TORQUE)
 		{
-			sweep.t = sweep.k * sweep.Ta;
-			sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
-			sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
-
-			if(sweep.mode == STEP)
-				for (i = 2; i < 4; i++) motor_control[i].currentTargetBeta = sweep.U;
-			else
-				for (i = 2; i < 4; i++) motor_control[i].currentTargetBeta = sweep.out;
-
-
-
-
-			for (i = 2; i < 4; i++) motor_data[i].torqueTarget = (int32_t)(500.0*motor_control[i].currentTargetBeta);
-			// for(i=2; i<4; i++) tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
-
-
-			if(sweep.mode == STEP)
-			{
-				tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
-				tmc4671_setTargetTorque_raw(3, motor_data[3].torqueTarget);
-			}
-			else
-			{
-				// tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
-				// tmc4671_setTargetTorque_raw(3, 0);
-				tmc4671_setTargetTorque_raw(3, motor_data[3].torqueTarget);
-				tmc4671_setTargetTorque_raw(2, 0);
-			}
-
-			for (i = 2; i < 4; i++) data1[sweep.k].currentActual[i-2]  = motor_control[i].currentActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].currentTarget[i-2]  = motor_control[i].currentTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityActual[i-2] = motor_control[i].velocityActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityTarget[i-2] = motor_control[i].velocityTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionActual[i-2] = motor_control[i].positionActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionTarget[i-2] = motor_control[i].positionTargetBeta;
-
-			if(sweep.k >= (DATA_N-1) ) // stop
-            {
-                mode = MODE_STOP;
-                stats = true;
-				rate = 1;
-
-                if(mode_matlab)
-				{
-                    snprintf(string, 200, 	"fintest\n");
-					HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-            	}
-            }
-			sweep.k++;
-		}
-		else if(mode == MODE_CONTROL_TEST)
-		{
-            sweep.t = sweep.k * sweep.Ta;
-    		sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
-    		sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t + (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
-
-
-
-
-
-			motor_control[2].velocityErrorBeta = sweep.out;
- 			motor_control[2].currentTargetBeta = PIControl(&piVelocity[2], motor_control[2].velocityErrorBeta);
-
-
-
-			for (i = 2; i < 4; i++) motor_data[i].torqueTarget = (int32_t)(500.0*motor_control[i].currentTargetBeta);
-
-			//for (i = 2; i < 4; i++) = tmc4671_setTargetTorque_raw(i, motor_data[i].torqueTarget);
-
-
-			for (i = 2; i < 4; i++) data1[sweep.k].currentActual[i-2]  = motor_control[i].currentActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].currentTarget[i-2]  = motor_control[i].currentTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityActual[i-2] = motor_control[i].velocityActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityTarget[i-2] = motor_control[i].velocityTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionActual[i-2] = motor_control[i].positionActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionTarget[i-2] = motor_control[i].positionTargetBeta;
-
-			if(sweep.k >= (DATA_N-1) ) // stop
-            {
-                mode = MODE_STOP;
-                stats = true;
-				rate = 1;
-
-                if(mode_matlab)
-				{
-                    snprintf(string, 200, 	"fintest\n");
-                    HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-                }
-            }
-
-			sweep.k++;
-		}
-		else if (mode == MODE_VELOCITY)
-		{
-			sweep.t = sweep.k * sweep.Ta;
-    		sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
-    		sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t + (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
-
-			if(sweep.mode == M2M3)
-			{
-
-			}
-			else if (sweep.mode == M2)
-			{
-				motor_control[2].velocityTargetBeta = sweep.out;
-				motor_control[3].velocityTargetBeta = 0;
-			}
-			else if (sweep.mode == M3)
-			{
-				motor_control[2].velocityTargetBeta = 0;
-				motor_control[3].velocityTargetBeta = sweep.out;
-			}
-
-			for (i = 2; i < 4; i++) motor_control[i].velocityErrorBeta = motor_control[i].velocityTargetBeta-motor_control[i].velocityActualBeta;
-			for (i = 2; i < 4; i++)  motor_control[i].currentTargetBeta = PIControl(&piVelocity[i], motor_control[i].velocityErrorBeta);
-
-			for (i = 2; i < 4; i++)
-			{
-				if(motor_control[i].currentTargetBeta >= 30)
-					motor_control[i].currentTargetBeta = 30;
-				if(motor_control[i].currentTargetBeta <= -30)
-					motor_control[i].currentTargetBeta = -30;
-			}
-
-			for (i = 2; i < 4; i++) motor_data[i].torqueTarget = (int32_t)(500.0*motor_control[i].currentTargetBeta);
+			motor_data[2].torqueTarget = (int32_t)(500.0*motor_control[2].iq);
 			tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
-			tmc4671_setTargetTorque_raw(3, motor_data[3].torqueTarget);
 
-			for (i = 2; i < 4; i++) data1[sweep.k].currentActual[i-2]  = motor_control[i].currentActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].currentTarget[i-2]  = motor_control[i].currentTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityActual[i-2] = motor_control[i].velocityActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityTarget[i-2] = motor_control[i].velocityTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionActual[i-2] = motor_control[i].positionActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionTarget[i-2] = motor_control[i].positionTargetBeta;
+
+		}
+		else if(mode == MODE_TRAJTEST)
+		{
+			//
+
+			if(sweep.k < 20)
+				motor_control[2].phiIn = 0;
+			else if(sweep.k == 20)
+				motor_control[2].phiIn = 10*M_PI/180;
+			else if(sweep.k > 5000)
+				motor_control[2].phiIn = 0;
+
+			//Trajectory
+			motor_control[2].phiInLimited = rateLimiter(&motor_control[2].limTrajPhi, motor_control[2].phiIn);
+			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi, motor_control[2].phiInLimited);
+			motor_control[2].omegaDes = biquad(&motor_control[2].bqTrajOmega, motor_control[2].phiDes);
+			motor_control[2].alphaDes = biquad(&motor_control[2].bqTrajAlpha, motor_control[2].omegaDes);
+
+			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi1, motor_control[2].phiDes);
+			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi2, motor_control[2].phiDes);
+			motor_control[2].omegaDes = biquad(&motor_control[2].bqTrajOmega1, motor_control[2].omegaDes);
+
+			for (i = 2; i < 4; i++) data1[sweep.k].phiIn[i-2]  	 		= motor_control[i].phiIn;
+			for (i = 2; i < 4; i++) data2[sweep.k].phiInLimited[i-2] 	= motor_control[i].phiInLimited;
+			for (i = 2; i < 4; i++) data2[sweep.k].phiDes[i-2]   		= motor_control[i].phiDes;
+			for (i = 2; i < 4; i++) data2[sweep.k].omegaDes[i-2] 		= motor_control[i].omegaDes;
+			for (i = 2; i < 4; i++) data2[sweep.k].alphaDes[i-2] 		= motor_control[i].alphaDes;
+
 
 
 			if(sweep.k >= (DATA_N-1)) // stop
-            {
-                mode = MODE_STOP;
-                stats = true;
-				rate = 1;
+		    {
+		        mode = MODE_STOP;
+		        stats = true;
+				// rate = 1;
 
-                if(mode_matlab)
+		        if(mode_matlab)
 				{
-                    snprintf(string, 200, 	"fintest\n");
+		            snprintf(string, 200, 	"fintest\n");
 					HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-            	}
-            }
-
-			if (sweep.mode == M2 || sweep.mode == M3)
-				sweep.k++;
-		}
-		else if (mode == MODE_VELOCITY_STEP)
-		{
-			if(sweep.k < 100)
-			{
-				motor_control[2].velocityTargetBeta = 0;
-				motor_control[3].velocityTargetBeta = 0;
-			}
-			else if (sweep.k == 100)
-			{
-				if (sweep.mode == M2)
-				{
-					motor_control[2].velocityTargetBeta = sweep.U;
-					motor_control[3].velocityTargetBeta = 0;
-				}
-				else if (sweep.mode == M3)
-				{
-					motor_control[2].velocityTargetBeta = 0;
-					motor_control[3].velocityTargetBeta = sweep.U;
-				}
-			}
-			else if(sweep.k >= 900)
-			{
-				motor_control[2].velocityTargetBeta = 0;
-				motor_control[3].velocityTargetBeta = 0;
-			}
-
-
-			for (i = 2; i < 4; i++) motor_control[i].velocityErrorBeta = motor_control[i].velocityTargetBeta-motor_control[i].velocityActualBeta;
-			for (i = 2; i < 4; i++)  motor_control[i].currentTargetBeta = PIControl(&piVelocity[i], motor_control[i].velocityErrorBeta);
-
-			for (i = 2; i < 4; i++)
-			{
-				if(motor_control[i].currentTargetBeta >= 30)
-					motor_control[i].currentTargetBeta = 30;
-				if(motor_control[i].currentTargetBeta <= -30)
-					motor_control[i].currentTargetBeta = -30;
-			}
-
-			for (i = 2; i < 4; i++) motor_data[i].torqueTarget = (int32_t)(500.0*motor_control[i].currentTargetBeta);
-			tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
-			tmc4671_setTargetTorque_raw(3, motor_data[3].torqueTarget);
-
-			for (i = 2; i < 4; i++) data1[sweep.k].currentActual[i-2]  = motor_control[i].currentActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].currentTarget[i-2]  = motor_control[i].currentTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityActual[i-2] = motor_control[i].velocityActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityTarget[i-2] = motor_control[i].velocityTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionActual[i-2] = motor_control[i].positionActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionTarget[i-2] = motor_control[i].positionTargetBeta;
-
-
-			if(sweep.k >= (DATA_N-1)) // stop
-            {
-                mode = MODE_STOP;
-                stats = true;
-				rate = 1;
-
-                if(mode_matlab)
-				{
-                    snprintf(string, 200, 	"fintest\n");
-					HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-            	}
-            }
-
-			if (sweep.mode == M2 || sweep.mode == M3)
-				sweep.k++;
+		    	}
+		    }
+			sweep.k++;
 		}
 		else if(mode == MODE_POSITION)
 		{
-			for (i = 2; i < 4; i++) motor_control[i].positionErrorBeta = motor_control[i].positionTargetBeta-motor_control[i].positionActualBeta;
-			for (i = 2; i < 4; i++) motor_control[i].velocityTargetBeta = PIControl(&piPosition[i], motor_control[i].positionErrorBeta);
 
-			for (i = 2; i < 4; i++) motor_control[i].velocityErrorBeta = motor_control[i].velocityTargetBeta-motor_control[i].velocityActualBeta;
-			for (i = 2; i < 4; i++)  motor_control[i].currentTargetBeta = PIControl(&piVelocity[i], motor_control[i].velocityErrorBeta);
 
-			for (i = 2; i < 4; i++) motor_data[i].torqueTarget = (int32_t)(500.0*motor_control[i].currentTargetBeta);
+			if(sweep.k < 20)
+				motor_control[2].phiIn = 0;
+			else if(sweep.k == 20)
+				motor_control[2].phiIn = 40*M_PI/180;
+			else if(sweep.k > 5000)
+				motor_control[2].phiIn = 0;
+
+			//Input filtering
+			// motor_control[2].phi = biquad(&motor_control[2].bqPhi, motor_control[2].phi);
+
+			//Trajectory
+			motor_control[2].phiInLimited = rateLimiter(&motor_control[2].limTrajPhi, motor_control[2].phiIn);
+			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi, motor_control[2].phiInLimited);
+			motor_control[2].omegaDes = biquad(&motor_control[2].bqTrajOmega, motor_control[2].phiDes);
+			motor_control[2].alphaDes = biquad(&motor_control[2].bqTrajAlpha, motor_control[2].omegaDes);
+			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi1, motor_control[2].phiDes);
+			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi2, motor_control[2].phiDes);
+			motor_control[2].omegaDes = biquad(&motor_control[2].bqTrajOmega1, motor_control[2].omegaDes);
+
+
+			disturbanceObserver(&motor_control[2]);
+
+
+			motor_data[2].torqueTarget = (int32_t)(500.0*motor_control[2].iq);
 			tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
-			tmc4671_setTargetTorque_raw(3, motor_data[3].torqueTarget);
 
-		}
-		else if(mode == MODE_TORQUE_X)
-		{
-			if(sweep.k < 1000)
-				motor_control[2].currentTargetBeta = 0;
-			else if (sweep.k == 1000)
-				motor_control[2].currentTargetBeta = 5;
-			else if(sweep.k == 2000)
-				motor_control[2].currentTargetBeta = 10;
-			else if(sweep.k == 3000)
-				motor_control[2].currentTargetBeta = 15;
-			else if(sweep.k == 4000)
-				motor_control[2].currentTargetBeta = 20;
-			else if(sweep.k == 5000)
-				motor_control[2].currentTargetBeta = 25;
-			else if(sweep.k == 6000)
-				motor_control[2].currentTargetBeta = 0;
-			else if(sweep.k >=7000)
-				motor_control[2].currentTargetBeta = 0;
 
-			for (i = 2; i < 4; i++)
-			{
-				if(motor_control[i].currentTargetBeta > 30)
-					motor_control[i].currentTargetBeta = 30;
-				if(motor_control[i].currentTargetBeta < -30)
-					motor_control[i].currentTargetBeta = -30;
-			}
 
-			for (i = 2; i < 4; i++) motor_data[i].torqueTarget = (int32_t)(500.0*motor_control[i].currentTargetBeta);
-			tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
-			tmc4671_setTargetFlux_raw(2,0);
-			// tmc4671_setTargetTorque_raw(3, motor_data[3].torqueTarget);
 
-			for (i = 2; i < 4; i++) data1[sweep.k].currentActual[i-2]  = motor_control[i].currentActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].currentTarget[i-2]  = motor_control[i].currentTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityActual[i-2] = motor_control[i].velocityActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].velocityTarget[i-2] = motor_control[i].velocityTargetBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionActual[i-2] = motor_control[i].positionActualBeta;
-			for (i = 2; i < 4; i++) data1[sweep.k].positionTarget[i-2] = motor_control[i].positionTargetBeta;
+			for (i = 2; i < 4; i++) data1[sweep.k].phiIn[i-2]  	 		= motor_control[i].phiIn;
+			for (i = 2; i < 4; i++) data2[sweep.k].phiInLimited[i-2] 	= motor_control[i].phiInLimited;
+			for (i = 2; i < 4; i++) data2[sweep.k].phiDes[i-2]   		= motor_control[i].phiDes;
+			for (i = 2; i < 4; i++) data2[sweep.k].omegaDes[i-2] 		= motor_control[i].omegaDes;
+			for (i = 2; i < 4; i++) data2[sweep.k].alphaDes[i-2] 		= motor_control[i].alphaDes;
+			for (i = 2; i < 4; i++) data1[sweep.k].phi[i-2]  	 		= motor_control[i].phi;
+			for (i = 2; i < 4; i++) data1[sweep.k].alphaM[i-2]  	 	= motor_control[i].alphaM;
+			for (i = 2; i < 4; i++) data1[sweep.k].iq[i-2]       		= motor_control[i].iq;
+			for (i = 2; i < 4; i++) data1[sweep.k].phiEst[i-2]  	 	= motor_control[i].phiEst;
+			for (i = 2; i < 4; i++) data1[sweep.k].omegaEst[i-2]  	 	= motor_control[i].omegaEst;
+			for (i = 2; i < 4; i++) data1[sweep.k].alphaEst[i-2]       	= motor_control[i].alphaEst;
+			for (i = 2; i < 4; i++) data1[sweep.k].alphaFrict[i-2]      = motor_control[i].alphaFrict;
 
 
 			if(sweep.k >= (DATA_N-1)) // stop
-            {
-                mode = MODE_STOP;
-                stats = true;
-				rate = 1;
+		    {
+		        mode = MODE_STOP;
+		        stats = true;
+				// rate = 1;
 
-                if(mode_matlab)
+		        if(mode_matlab)
 				{
-                    snprintf(string, 200, 	"fintest\n");
+		            snprintf(string, 200, 	"fintest\n");
 					HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-            	}
-            }
-
+		    	}
+		    }
 			sweep.k++;
 		}
-
-
-
 
 
 
@@ -621,9 +418,9 @@ void logic_loop(void)
 		case '0':
 			mode = MODE_STOP;
 			stats = true;
-			rate = 1;
-			for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta = 0;
-			tmc4671_setTargetFlux_raw(2, 0);
+			// rate = 1;
+			for (i = 0; i < 4; i++) tmc4671_setTargetFlux_raw(2, 0);
+			for (i = 0; i < 4; i++) tmc4671_setTargetTorque_raw(2, 0);
 			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
 			break;
 
@@ -632,286 +429,69 @@ void logic_loop(void)
 			stats = true;
 			break;
 
-
 		case '1':
-			mode = MODE_TORQUE_SWEEP;
+			mode = MODE_TRAJTEST;
 			sweep.k = 0;
-			sweep.U = 5;
-			sweep.omegaStart = 2 * M_PI * 0.5;
-			sweep.omegaEnd = 2 * M_PI * 5;
-			sweep.mode = LOW;
-			rate = 3;
-			rate_old = 3;
-			sweep.Ta = rate*TA;
+			sweep.Ta = TA;
 			stats = false;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
+
+			for (i = 0; i < 4; i++) rateLimiterInit(&motor_control[i].limTrajPhi, 100, 0);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0098135136, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6037472486, 0.6430013180);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega,  2444.0617675781, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajAlpha,  2444.0617675781, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi1,   0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi2,   0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega1, 0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqPhi, 0.2390572280, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, -0.5218855739, 0.0000000000);
+			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
+			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
+			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_STOPPED);
+			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_STOPPED);
 			break;
+
+		// case '2':
+		// 	mode = MODE_TORQUE;
+		// 	for (i = 0; i < 4; i++) motor_control[i].iq = 10;
+		// 	tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
+		// 	tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
+		// 	tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
+		// 	tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_STOPPED);
+		// 	break;
+
 
 		case '2':
-			mode = MODE_TORQUE_SWEEP;
-			sweep.k = 0;
-			sweep.U = 15;
-			sweep.omegaStart = 2 * M_PI * 2;
-			sweep.omegaEnd = 2 * M_PI * 20;
-			sweep.mode = MID;
-			rate = 2;
-			rate_old = 2;
-			sweep.Ta = rate*TA;
-			stats = false;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-		case '3':
-			mode = MODE_TORQUE_SWEEP;
-			sweep.k = 0;
-			sweep.U = 30;
-			sweep.omegaStart = 2 * M_PI * 10;
-			sweep.omegaEnd = 2 * M_PI * 100;
-			sweep.mode = HIGH;
-			rate = 1;
-			rate_old = 1;
-			sweep.Ta = rate*TA;
-			stats = false;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-		case '4':
-			mode = MODE_TORQUE_SWEEP;
-			sweep.k = 0;
-			sweep.U = 30;
-			sweep.omegaStart = 2 * M_PI * 40;
-			sweep.omegaEnd = 2 * M_PI * 400;
-			sweep.mode = HIGH;
-			rate = 1;
-			rate_old = 1;
-			sweep.Ta = rate*TA;
-			stats = false;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-		case '5':
-			mode = MODE_TORQUE_SWEEP;
-			sweep.k = 0;
-			sweep.U = 5;
-			sweep.mode = STEP;
-			rate = 1;
-			rate_old = 1;
-			sweep.Ta = rate*TA;
-			stats = false;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-		case '6':
-			mode = MODE_TORQUE_SWEEP;
-			sweep.k = 0;
-			sweep.U = 10;
-			sweep.mode = STEP;
-			rate = 1;
-			rate_old = 1;
-			sweep.Ta = rate*TA;
-			stats = false;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-		case '7':
-			mode = MODE_TORQUE_SWEEP;
-			sweep.k = 0;
-			sweep.U = 20;
-			sweep.mode = STEP;
-			rate = 1;
-			rate_old = 1;
-			sweep.Ta = rate*TA;
-			stats = false;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-
-		case '8':
-			mode = MODE_CONTROL_TEST;
-			sweep.k = 0;
-			sweep.omegaStart = 2 * M_PI * 20;
-			sweep.omegaEnd = 2 * M_PI *200;
-			sweep.U = 1;
-			rate = 1;
-			rate_old = 1;
-			sweep.Ta = rate*TA;
-			stats = false;
-
-
-
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
-			break;
-
-		case '9':
-			mode = MODE_RCCONTROL;
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-		case 'g':
-			mode = MODE_VELOCITY;
-			rate = 1; rate_old = 1;
-			sweep.mode = M2M3;
-			sweep.k = 0;
-			PIControlSetup(&piVelocity[2], 1.00000000, 0.12500000, 0.11125419, 0.52416212, 50.0, 0.0);
-			PIControlSetup(&piVelocity[3], 1.00000000, 0.12500000, 0.20195143, 0.80663086, 50.0, 0.0);
-			PIControlSetup(&piPosition[2], 1.00000000, 2.00000000, 1.62602237, 98.36947803, 20.0, 0.0);
-			PIControlSetup(&piPosition[3], 1.00000000, 2.00000000, 1.61337772, 97.75207179, 20.0, 0.0);
-
-
-
-			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-		case 'z':
-			mode = MODE_VELOCITY;
-			rate = 1; rate_old = 1;
-
-			PIControlSetup(&piVelocity[2], 1.00000000, 0.12500000, 0.11125419, 0.52416212, 50.0, 0.0);
-			PIControlSetup(&piVelocity[3], 1.00000000, 0.12500000, 0.20195143, 0.80663086, 50.0, 0.0);
-			PIControlSetup(&piPosition[2], 1.00000000, 2.00000000, 1.62602237, 98.36947803, 20.0, 0.0);
-			PIControlSetup(&piPosition[3], 1.00000000, 2.00000000, 1.61337772, 97.75207179, 20.0, 0.0);
-			sweep.k = 0;
-			sweep.omegaStart = 2 * M_PI * 20;
-			sweep.omegaEnd = 2 * M_PI *200;
-			sweep.U = 3;
-			sweep.Ta = rate*TA;
-			stats = false;
-			sweep.mode = M2;
-
-			for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta = 0;
-			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_STOPPED);
-			break;
-
-		case 'h':
-			mode = MODE_VELOCITY;
-			rate = 1; rate_old = 1;
-
-			PIControlSetup(&piVelocity[2], 1.00000000, 0.12500000, 0.11125419, 0.52416212, 50.0, 0.0);
-			PIControlSetup(&piVelocity[3], 1.00000000, 0.12500000, 0.20195143, 0.80663086, 50.0, 0.0);
-			PIControlSetup(&piPosition[2], 1.00000000, 2.00000000, 1.62602237, 98.36947803, 20.0, 0.0);
-			PIControlSetup(&piPosition[3], 1.00000000, 2.00000000, 1.61337772, 97.75207179, 20.0, 0.0);
-			sweep.k = 0;
-			sweep.omegaStart = 2 * M_PI *20;
-			sweep.omegaEnd = 2 * M_PI *200;
-			sweep.U = 3;
-			sweep.Ta = rate*TA;
-			stats = false;
-			sweep.mode = M3;
-
-			for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta = 0;
-			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-
-		case 'u':
-			mode = MODE_VELOCITY_STEP;
-			rate = 1; rate_old = 1;
-
-			PIControlSetup(&piVelocity[2], 1.00000000, 0.12500000, 0.11125419, 0.52416212, 50.0, 0.0);
-			PIControlSetup(&piVelocity[3], 1.00000000, 0.12500000, 0.20195143, 0.80663086, 50.0, 0.0);
-			PIControlSetup(&piPosition[2], 1.00000000, 2.00000000, 1.62602237, 98.36947803, 20.0, 0.0);
-			PIControlSetup(&piPosition[3], 1.00000000, 2.00000000, 1.61337772, 97.75207179, 20.0, 0.0);
-
-			sweep.k = 0;
-			sweep.U = 100*2*M_PI/60;
-			sweep.Ta = rate*TA;
-			stats = false;
-			sweep.mode = M2;
-
-			for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta = 0;
-			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_STOPPED);
-			break;
-
-
-		case 'j':
-			mode = MODE_VELOCITY_STEP;
-			rate = 1; rate_old = 1;
-
-			PIControlSetup(&piVelocity[2], 1.00000000, 0.12500000, 0.11125419, 0.52416212, 50.0, 0.0);
-			PIControlSetup(&piVelocity[3], 1.00000000, 0.12500000, 0.20195143, 0.80663086, 50.0, 0.0);
-			PIControlSetup(&piPosition[2], 1.00000000, 2.00000000, 1.62602237, 98.36947803, 20.0, 0.0);
-			PIControlSetup(&piPosition[3], 1.00000000, 2.00000000, 1.61337772, 97.75207179, 20.0, 0.0);
-
-
-			sweep.k = 0;
-			sweep.U = 100*2*M_PI/60;
-			sweep.Ta = rate*TA;
-			stats = false;
-			sweep.mode = M3;
-
-			for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta = 0;
-			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_TORQUE);
-			break;
-
-		case 'o':
 			mode = MODE_POSITION;
-			rate = 1; rate_old = 1;
 			sweep.k = 0;
-			PIControlSetup(&piVelocity[2], 1.00000000, 0.25000000, 0.29541424, 0.80627060, 50.0, 0.0);
-			PIControlSetup(&piVelocity[3], 1.00000000, 0.25000000, 0.28623800, 1.22981941, 50.0, 0.0);
-			PIControlSetup(&piPosition[2], 1.00000000, 2.00000000, 3.09568916, 144.01849946, 50.0, 0.0);
-			PIControlSetup(&piPosition[3], 1.00000000, 2.00000000, 3.05086811, 149.19523456, 50.0, 0.0);
+			sweep.Ta = TA;
+			stats = false;
 
-			for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta = 0;
-			for (i = 0; i < 4; i++) motor_control[i].positionTargetBeta = 0;
+			for (i = 0; i < 4; i++) motor_control[i].iq = 0;
+			tmc4671_writeInt(2, TMC4671_PID_POSITION_ACTUAL, 0);
+
+			for (i = 0; i < 4; i++) rateLimiterInit(&motor_control[i].limTrajPhi, 100, 0);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0098135136, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6037472486, 0.6430013180);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega,  2444.0617675781, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajAlpha,  2444.0617675781, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi1,   0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi2,   0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega1, 0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqPhi, 0.4399008453, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, -0.1201983094, 0.0000000000);
+			disturbanceObserverInit(&motor_control[2], 2450.4422698000, 2249282.8430082649, 916607551.2230231762, 139918418361.2410888672, 3553.0575843922, 119.3805208364, 790.0960095481);
 
 			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
 			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-			//tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_STOPPED);
-
-			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_TORQUE);
+			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
+			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_STOPPED);
 			break;
 
-		case 'p':
 
-			mode = MODE_IDLE;
-			stats = true;
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-			tmc4671_setTargetFlux_raw(2, 5000);
-			tmc4671_setTargetTorque_raw(2, 0);
-			// tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-			// tmc4671_setTargetTorque_raw(2, 10000);
-		break;
-
-
-		case 'v':
-
-			mode = MODE_TORQUE_X;
-			stats = true;
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-
-			rate = 1; rate_old = 1;
-			sweep.k = 0;
-			sweep.U = 3000;
-			sweep.Ta = rate*TA;
-			stats = false;
-			sweep.mode = M2;
-
-		break;
-
-		case '+':
-			for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta += 10;
-		break;
-
-		case '-':
-			for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta -= 10;
-		break;
+		// case '+':
+		// 	for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta += 10;
+		// break;
+		//
+		// case '-':
+		// 	for (i = 0; i < 4; i++) motor_control[i].velocityTargetBeta -= 10;
+		// break;
 
 
 
@@ -920,20 +500,19 @@ void logic_loop(void)
 			for (i = 0; i < DATA_N; i++)
 			{
 				print_data_float((float)i,   					(uint8_t*)(string));
-				print_data_float((float)rate_old,   			(uint8_t*)(string)+4*1);
-				print_data_float(data1[i].currentTarget[0], 	(uint8_t*)(string)+4*2);
-				print_data_float(data1[i].currentActual[0],  	(uint8_t*)(string)+4*3);
-				print_data_float(data1[i].velocityTarget[0],   	(uint8_t*)(string)+4*4);
-				print_data_float(data1[i].velocityActual[0],  	(uint8_t*)(string)+4*5);
-				print_data_float(data1[i].positionTarget[0],  	(uint8_t*)(string)+4*6);
-				print_data_float(data1[i].positionActual[0],   	(uint8_t*)(string)+4*7);
-				print_data_float(data1[i].currentTarget[1], 	(uint8_t*)(string)+4*8);
-				print_data_float(data1[i].currentActual[1],  	(uint8_t*)(string)+4*9);
-				print_data_float(data1[i].velocityTarget[1],   	(uint8_t*)(string)+4*10);
-				print_data_float(data1[i].velocityActual[1],  	(uint8_t*)(string)+4*11);
-				print_data_float(data1[i].positionTarget[1],  	(uint8_t*)(string)+4*12);
-				print_data_float(data1[i].positionActual[1],   	(uint8_t*)(string)+4*13);
-				HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 4*14);
+				print_data_float(data1[i].phiIn[0], 			(uint8_t*)(string)+4*1);
+				print_data_float(data2[i].phiInLimited[0],  	(uint8_t*)(string)+4*2);
+				print_data_float(data2[i].phiDes[0],  			(uint8_t*)(string)+4*3);
+				print_data_float(data2[i].omegaDes[0],   		(uint8_t*)(string)+4*4);
+				print_data_float(data2[i].alphaDes[0],  		(uint8_t*)(string)+4*5);
+				print_data_float(data1[i].phi[0], 				(uint8_t*)(string)+4*6);
+				print_data_float(data1[i].alphaM[0],  			(uint8_t*)(string)+4*7);
+				print_data_float(data1[i].phiEst[0],   			(uint8_t*)(string)+4*8);
+				print_data_float(data1[i].omegaEst[0],  		(uint8_t*)(string)+4*9);
+				print_data_float(data1[i].alphaEst[0], 			(uint8_t*)(string)+4*10);
+				print_data_float(data1[i].alphaFrict[0],  		(uint8_t*)(string)+4*11);
+				print_data_float(data1[i].iq[0],   				(uint8_t*)(string)+4*12);
+				HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, 4*13);
 				HAL_Delay(1);
 			}
             HAL_Delay(1);
