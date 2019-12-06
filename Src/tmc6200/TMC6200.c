@@ -25,7 +25,7 @@ void spiSpeedSlow_reset(uint8_t drv)
 }
 
 // spi access
-int tmc6200_readInt(uint8_t drv, uint8_t address)
+int16_t tmc6200_readInt(uint8_t drv, uint8_t address)
 {
 	uint8_t rxData[5];
 	uint8_t txData[5];
@@ -43,7 +43,7 @@ int tmc6200_readInt(uint8_t drv, uint8_t address)
 
 	spiSpeedSlow_reset(drv);
 
-	return (int)((rxData[1] << 24) | (rxData[2] << 16) | (rxData[3] << 8) | (rxData[4] << 0));
+	return (int16_t)((rxData[1] << 24) | (rxData[2] << 16) | (rxData[3] << 8) | (rxData[4] << 0));
 }
 
 

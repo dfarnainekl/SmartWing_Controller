@@ -7,10 +7,8 @@
 #include <string.h>
 
 #include "swdriver.h"
-#include "tmc6200/TMC6200.h"
 #include "tmc6200/TMC6200_highLevel.h"
 #include "tmc4671/TMC4671_highLevel.h"
-#include "tmc4671/TMC4671.h"
 #include "as5047U.h"
 #include "usart.h"
 #include "tim.h"
@@ -25,12 +23,10 @@
 #define MODE_TORQUE				1
 #define MODE_TRAJTEST			2
 #define MODE_POSITION			3
-#define MODE_RCCONTROL			4
-#define MODE_TORQUE_SWEEP		5
+#define MODE_POSITION_INIT_M3	4
+#define MODE_POSITION_INIT_M2	5
 #define MODE_IDLE				6
-#define MODE_CONTROL_TEST		7
-#define MODE_VELOCITY_STEP		8
-#define MODE_TORQUE_X			9
+#define MODE_RCCONTROL			7
 
 
 typedef enum

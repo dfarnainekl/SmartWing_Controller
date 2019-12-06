@@ -4,15 +4,14 @@
 uint8_t mode = MODE_STOP;
 sweep_t sweep = {.Ta = TA, .N = DATA_N};
 
+//log data
 __attribute__((section(".ram_d1")))  data1_t data1[DATA_N] = { 0 };
 __attribute__((section(".ram_d2")))  data2_t data2[DATA_N] = { 0 };
+
 
 motor_t 	motor_data[4] = { 0 };
 control_t 	motor_control[4] = { 0 };
 
-volatile uint16_t systick_counter = 0;
-volatile uint16_t systick_counter_2 = 0;
-volatile uint16_t systick_counter_3 = 0;
 
 
 // SPI Interrupt
@@ -29,15 +28,17 @@ uint8_t rx_byte;
 volatile uint16_t 	pwm_in[4] = { 1500, 1500, 1500, 1500 };
 volatile bool 		pwm_updated = false;
 
-
 //AS5047U
 uint16_t angleInRaw[4];
 uint8_t as5074uErrorCounter[4] = {0};
 
-
 bool stats = true;
 bool current = false;
 bool mode_matlab = 0;
+
+volatile uint16_t Ta_counter = 0;
+volatile uint16_t systick_counter = 0;
+
 
 
 void logic_init(void)
@@ -53,14 +54,7 @@ void logic_init(void)
 	}
 	else
 	{
-		 clear_string[0] = 27;
-		 clear_string[1] = '[';
-		 clear_string[2] = '2';
-		 clear_string[3] = 'J';
-		 clear_string[4] = 27;
-		 clear_string[5] = '[';
-		 clear_string[6] = 'H';
-		 clear_string[7] = '\0';
+		 clear_string[0] = 27; clear_string[1] = '['; clear_string[2] = '2'; clear_string[3] = 'J'; clear_string[4] = 27; clear_string[5] = '['; clear_string[6] = 'H'; clear_string[7] = '\0';
 	}
 
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
@@ -75,15 +69,15 @@ void logic_init(void)
 	for (i = 0; i < 4; i++) swdriver_setEnable(i, true);
 	HAL_Delay(10);
 
-	for (i = 0; i < 4; i++) tmc6200_highLeve_resetErrorFlags(i);
+	for (i = 0; i < 4; i++) tmc6200_highLevel_resetErrorFlags(i);
 
 	for (i = 0; i < 4; i++) TMC4671_highLevel_init(i);
 	HAL_Delay(10);
 
 	for (i = 0; i < 4; i++) as5047U_setABIResolution14Bit(i); //FIXME
 	for (i = 0; i < 4; i++) TMC4671_highLevel_stoppedMode(i);
-
 	HAL_Delay(10);
+
 	for (i = 0; i < 4; i++) spiSpeedSlow_reset(i);
 	HAL_Delay(10);
 
@@ -100,23 +94,27 @@ void logic_init(void)
 			for(i=2; i<4; i++) angleInRaw[i] = as5047U_getAngle(i);
 			snprintf(string, 500, "%s", clear_string);
 			snprintf(string+strlen(string), 500-strlen(string), "as5047U Position:  %5d\t%5d\t%5d\t%5d\n", angleInRaw[0], angleInRaw[1], angleInRaw[2], angleInRaw[3] );
-			snprintf(string+strlen(string), 500-strlen(string), "TMC6200 GSTAT:     %5d\t%5d\t%5d\t%5d\n", tmc6200_readInt(0, TMC6200_GSTAT), tmc6200_readInt(1, TMC6200_GSTAT), tmc6200_readInt(2, TMC6200_GSTAT), tmc6200_readInt(3, TMC6200_GSTAT));
-			snprintf(string+strlen(string), 500-strlen(string), "TMC6200 GCONF:     %5d\t%5d\t%5d\t%5d\n", tmc6200_readInt(0, TMC6200_GCONF), tmc6200_readInt(1, TMC6200_GCONF), tmc6200_readInt(2, TMC6200_GCONF), tmc6200_readInt(3, TMC6200_GCONF));
-			snprintf(string+strlen(string), 500-strlen(string), "TMC6200 DRV_CONF:  %5d\t%5d\t%5d\t%5d\n", tmc6200_readInt(0, TMC6200_DRV_CONF), tmc6200_readInt(1, TMC6200_DRV_CONF), tmc6200_readInt(2, TMC6200_DRV_CONF), tmc6200_readInt(3, TMC6200_DRV_CONF));
+			snprintf(string+strlen(string), 500-strlen(string), "TMC6200 GSTAT:     %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterGSTAT(0), tmc6200_highLevel_getRegisterGSTAT(1), tmc6200_highLevel_getRegisterGSTAT(2), tmc6200_highLevel_getRegisterGSTAT(3));
+			snprintf(string+strlen(string), 500-strlen(string), "TMC6200 GCONF:     %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterGCONF(0), tmc6200_highLevel_getRegisterGCONF(1), tmc6200_highLevel_getRegisterGCONF(2), tmc6200_highLevel_getRegisterGCONF(3));
+			snprintf(string+strlen(string), 500-strlen(string), "TMC6200 DRV_CONF:  %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterDRV_CONF(0), tmc6200_highLevel_getRegisterDRV_CONF(1), tmc6200_highLevel_getRegisterDRV_CONF(2), tmc6200_highLevel_getRegisterDRV_CONF(3));
 			snprintf(string+strlen(string), 500-strlen(string), "as5074u Errors:    %5d\t%5d\t%5d\t%5d\n", as5074uErrorCounter[0], as5074uErrorCounter[1], as5074uErrorCounter[2], as5074uErrorCounter[3]);
-			snprintf(string+strlen(string), 500-strlen(string), "PHI_M:             %5d\t%5d\t%5d\t%5d\n", tmc4671_readRegister16BitValue(0, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_0_TO_15), tmc4671_readRegister16BitValue(1, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_0_TO_15), tmc4671_readRegister16BitValue(2, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_0_TO_15), tmc4671_readRegister16BitValue(3, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_0_TO_15));
-			snprintf(string+strlen(string), 500-strlen(string), "PHI_E:             %5d\t%5d\t%5d\t%5d\n", tmc4671_readRegister16BitValue(0, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_16_TO_31), tmc4671_readRegister16BitValue(1, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_16_TO_31), tmc4671_readRegister16BitValue(2, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_16_TO_31), tmc4671_readRegister16BitValue(3, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_16_TO_31));
+			snprintf(string+strlen(string), 500-strlen(string), "PHI_M:             %5d\t%5d\t%5d\t%5d\n", TMC4671_highLevel_getPhiM(0), TMC4671_highLevel_getPhiM(1), TMC4671_highLevel_getPhiM(2), TMC4671_highLevel_getPhiM(3));
+			snprintf(string+strlen(string), 500-strlen(string), "PHI_E:             %5d\t%5d\t%5d\t%5d\n", TMC4671_highLevel_getPhiE(0), TMC4671_highLevel_getPhiE(1), TMC4671_highLevel_getPhiE(2), TMC4671_highLevel_getPhiE(3));
 			// Should read: TMC6200 GSTAT = 0, TMC6200 GCONF = 48, TMC6200 DRV_CONF = 0, as5074u Errors = 0
 			HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-			HAL_Delay(100);
+			HAL_Delay(50);
 			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 0);
 		}
 	}
 	rx_byte_new = 0;
 	HAL_Delay(100);
 
-	TMC4671_highLevel_initEncoder_new(2);
+	TMC4671_highLevel_initEncoder(2);
 	HAL_Delay(100);
+
+	TMC4671_highLevel_initEncoder(3);
+	HAL_Delay(100);
+
 	// TMC4671_highLevel_initEncoder_new(3);
 	// HAL_Delay(100);
 
@@ -143,7 +141,7 @@ void logic_init(void)
 	TMC4671_highLevel_pwmOff(0);
 	TMC4671_highLevel_pwmOff(1);
 	// TMC4671_highLevel_pwmOff(2);
-	TMC4671_highLevel_pwmOff(3);
+	// TMC4671_highLevel_pwmOff(3);
 
 	//for(i=2; i<4; i++) tmc4671_writeInt(i, TMC4671_PID_POSITION_ACTUAL, 0);
 
@@ -152,6 +150,8 @@ void logic_init(void)
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_3);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_4);
+
+	HAL_TIM_Base_Start_IT(&htim5);
 
 	for (i = 0; i < 4; i++) TMC4671_highLevel_setCurrentLimit(i, 15000);
 
@@ -198,21 +198,22 @@ void logic_loop(void)
 	{
 		pwm_updated = false;
 
-		if(mode == MODE_RCCONTROL)
+		if(mode == MODE_POSITION)
 		{
 			//for(i=0; i<4; i++) angleIn[i] =   ( (float)(pwm_in[i] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 
 			angleIn[2] =   ( (float)(pwm_in[0] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 			angleIn[3] =   ( (float)(pwm_in[1] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 
-			for(i=0; i<4; i++) motor_control[i].phiIn = calcAngleTarget(i, angleIn)*M_PI/180;
+			// for(i=0; i<4; i++) motor_control[i].phiIn = calcAngleTarget(i, angleIn)*M_PI/180;
+			for(i=0; i<4; i++) motor_control[i].phiIn = 2*angleIn[i]*M_PI/180;
 		}
 	}
 	/* -------------------------------------------------------------------------  */
 
-	if (stats == true && systick_counter_3 >= 500) //4Hz
+	if (stats == true && systick_counter >= 200) //5Hz
 	{
-		systick_counter_3 = 0;
+		systick_counter = 0;
 
 		if(mode_matlab == 0)
 		{
@@ -232,30 +233,27 @@ void logic_loop(void)
 	/* -------------------------------------------------------------------------  */
 
 	// if (systick_counter >= rate) //Ta = rate * 500us
-	if (systick_counter >= 1) //Ta = rate * 500us
+	if (Ta_counter >= 1) //Ta = rate * 500us
 	{
-		systick_counter = 0;
+		Ta_counter = 0;
 
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, 1);
 
 		// for(i=2; i<4; i++) motor_data[i].torqueActual   = tmc4671_getActualTorque_raw(i);
-		for(i=2; i<4; i++) motor_data[i].positionActual = tmc4671_getActualPosition(i);
+		// for(i=2; i<4; i++) motor_data[i].positionActual = TMC4671_highLevel_getPositionActual(i);
 		// for(i=2; i<4; i++) motor_data[i].velocityActual = tmc4671_getActualVelocity(i);
-
-		// discard wrong values!!!!!
-
 
 		//for(i=2; i<4; i++) motor_control[i].currentActualBeta = (float)motor_data[i].torqueActual/500.0; 				// Ampere
 		// for(i=2; i<4; i++) motor_control[i].positionActualBeta = (float)motor_data[i].positionActual/65536.0*2*M_PI; 	// rad
 		// for(i=2; i<4; i++) motor_control[i].velocityActualBeta = (float)motor_data[i].velocityActual/60*2*M_PI;			// rad per s
 
-		for(i=2; i<4; i++) motor_control[i].phi = (float)motor_data[i].positionActual/65536.0*2*M_PI; 	// rad
+
+		for(i=2; i<4; i++) motor_control[i].phi = TMC4671_highLevel_getPositionActualRad(i);
 
 
 		if (mode == MODE_STOP)
 		{
-			for (i = 2; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
-
+			for (i = 0; i < 4; i++) TMC4671_highLevel_stoppedMode(i);
 		}
 		else if(mode == MODE_IDLE)
 		{
@@ -264,113 +262,168 @@ void logic_loop(void)
 		else if(mode == MODE_TORQUE)
 		{
 			motor_data[2].torqueTarget = (int32_t)(500.0*motor_control[2].iq);
-			tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
+			TMC4671_highLevel_setTorqueTarget(2, motor_data[2].torqueTarget);
 
 
 		}
 		else if(mode == MODE_TRAJTEST)
 		{
-			//
+			// for (i = 2; i < 4; i++) data1[sweep.k].phiIn[i-2]  	 		= motor_control[i].phiIn;
+			// for (i = 2; i < 4; i++) data2[sweep.k].phiInLimited[i-2] 	= motor_control[i].phiInLimited;
+			// for (i = 2; i < 4; i++) data2[sweep.k].phiDes[i-2]   		= motor_control[i].phiDes;
+			// for (i = 2; i < 4; i++) data2[sweep.k].omegaDes[i-2] 		= motor_control[i].omegaDes;
+			// for (i = 2; i < 4; i++) data2[sweep.k].alphaDes[i-2] 		= motor_control[i].alphaDes;
+			// for (i = 2; i < 4; i++) data1[sweep.k].phi[i-2]  	 		= motor_control[i].phi;
+			// for (i = 2; i < 4; i++) data1[sweep.k].alphaM[i-2]  	 	= motor_control[i].alphaM;
+			// for (i = 2; i < 4; i++) data1[sweep.k].iq[i-2]       		= motor_control[i].iq;
+			// for (i = 2; i < 4; i++) data1[sweep.k].phiEst[i-2]  	 	= motor_control[i].phiEst;
+			// for (i = 2; i < 4; i++) data1[sweep.k].omegaEst[i-2]  	 	= motor_control[i].omegaEst;
+			// for (i = 2; i < 4; i++) data1[sweep.k].alphaEst[i-2]       	= motor_control[i].alphaEst;
+			// for (i = 2; i < 4; i++) data1[sweep.k].alphaFrict[i-2]      = motor_control[i].alphaFrict;
+		}
+		else if(mode == MODE_POSITION_INIT_M3)
+		{
+			i = 3;
 
-			if(sweep.k < 20)
-				motor_control[2].phiIn = 0;
-			else if(sweep.k == 20)
-				motor_control[2].phiIn = 10*M_PI/180;
-			else if(sweep.k > 5000)
-				motor_control[2].phiIn = 0;
+
+			if(sweep.k == 0)
+			{
+				motor_control[i].iq = 0;
+				motor_control[i].phi0 = TMC4671_highLevel_getPositionActualRad(i);
+
+				rateLimiterInit(&motor_control[i].limTrajPhi, 100, motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajPhi,    motor_control[i].phi0);
+			 	biquadReset(&motor_control[i].bqTrajOmega,  motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajAlpha,  0);
+				biquadReset(&motor_control[i].bqTrajPhi1,   motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajPhi2,   motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajOmega1, 0);
+				biquadReset(&motor_control[i].bqPhi,        motor_control[i].phi0);
+
+				disturbanceObserverResetPhi0(&motor_control[i], motor_control[i].phi0);
+			}
+			else if(sweep.k < 500)
+			{
+				motor_control[i].phiIn = motor_control[i].phi0;
+			}
+			else
+			{
+				motor_control[i].phiIn = 0;
+			}
+
+			//Input filtering
+			motor_control[i].phi = biquad(&motor_control[i].bqPhi, motor_control[i].phi);
 
 			//Trajectory
-			motor_control[2].phiInLimited = rateLimiter(&motor_control[2].limTrajPhi, motor_control[2].phiIn);
-			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi, motor_control[2].phiInLimited);
-			motor_control[2].omegaDes = biquad(&motor_control[2].bqTrajOmega, motor_control[2].phiDes);
-			motor_control[2].alphaDes = biquad(&motor_control[2].bqTrajAlpha, motor_control[2].omegaDes);
+			motor_control[i].phiInLimited = rateLimiter(&motor_control[i].limTrajPhi, motor_control[i].phiIn);
+			motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi, motor_control[i].phiInLimited);
+			motor_control[i].omegaDes = biquad(&motor_control[i].bqTrajOmega, motor_control[i].phiDes);
+			motor_control[i].alphaDes = biquad(&motor_control[i].bqTrajAlpha, motor_control[i].omegaDes);
+			motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi1, motor_control[i].phiDes);
+			motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi2, motor_control[i].phiDes);
+			motor_control[i].omegaDes = biquad(&motor_control[i].bqTrajOmega1, motor_control[i].omegaDes);
 
-			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi1, motor_control[2].phiDes);
-			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi2, motor_control[2].phiDes);
-			motor_control[2].omegaDes = biquad(&motor_control[2].bqTrajOmega1, motor_control[2].omegaDes);
+			//Disturbance Observer
+			disturbanceObserver(&motor_control[i]);
 
-			for (i = 2; i < 4; i++) data1[sweep.k].phiIn[i-2]  	 		= motor_control[i].phiIn;
-			for (i = 2; i < 4; i++) data2[sweep.k].phiInLimited[i-2] 	= motor_control[i].phiInLimited;
-			for (i = 2; i < 4; i++) data2[sweep.k].phiDes[i-2]   		= motor_control[i].phiDes;
-			for (i = 2; i < 4; i++) data2[sweep.k].omegaDes[i-2] 		= motor_control[i].omegaDes;
-			for (i = 2; i < 4; i++) data2[sweep.k].alphaDes[i-2] 		= motor_control[i].alphaDes;
+			TMC4671_highLevel_setTorqueTargetA(i, motor_control[i].iq);
 
 
 
-			if(sweep.k >= (DATA_N-1)) // stop
-		    {
-		        mode = MODE_STOP;
-		        stats = true;
-				// rate = 1;
-
-		        if(mode_matlab)
-				{
-		            snprintf(string, 200, 	"fintest\n");
-					HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-		    	}
-		    }
 			sweep.k++;
+
+			if(sweep.k >= 2000 &&  motor_control[3].phiDes < 0.000001 && motor_control[3].phiDes > -0.000001)  // stop
+		    {
+		        mode = MODE_POSITION_INIT_M2;
+		        stats = false;
+				sweep.k = 0;
+		    }
+		}
+		else if(mode == MODE_POSITION_INIT_M2)
+		{
+			i = 2;
+			if(sweep.k == 0)
+			{
+				motor_control[i].iq = 0;
+				motor_control[i].phi0 = TMC4671_highLevel_getPositionActualRad(i);
+
+				rateLimiterInit(&motor_control[i].limTrajPhi, 100, motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajPhi,    motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajOmega,  motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajAlpha,  0);
+				biquadReset(&motor_control[i].bqTrajPhi1,   motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajPhi2,   motor_control[i].phi0);
+				biquadReset(&motor_control[i].bqTrajOmega1, 0);
+				biquadReset(&motor_control[i].bqPhi,        motor_control[i].phi0);
+
+				disturbanceObserverResetPhi0(&motor_control[i], motor_control[i].phi0);
+			}
+			else if(sweep.k < 500)
+			{
+				motor_control[i].phiIn = motor_control[i].phi0;
+			}
+			else
+			{
+				motor_control[i].phiIn = 0;
+			}
+
+			//Input filtering
+			for(i=2; i<4; i++) motor_control[i].phi = biquad(&motor_control[i].bqPhi, motor_control[i].phi);
+
+			//Trajectory
+			for(i=2; i<4; i++)motor_control[i].phiInLimited = rateLimiter(&motor_control[i].limTrajPhi, motor_control[i].phiIn);
+			for(i=2; i<4; i++)motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi, motor_control[i].phiInLimited);
+			for(i=2; i<4; i++)motor_control[i].omegaDes = biquad(&motor_control[i].bqTrajOmega, motor_control[i].phiDes);
+			for(i=2; i<4; i++)motor_control[i].alphaDes = biquad(&motor_control[i].bqTrajAlpha, motor_control[i].omegaDes);
+			for(i=2; i<4; i++)motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi1, motor_control[i].phiDes);
+			for(i=2; i<4; i++)motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi2, motor_control[i].phiDes);
+			for(i=2; i<4; i++)motor_control[i].omegaDes = biquad(&motor_control[i].bqTrajOmega1, motor_control[i].omegaDes);
+
+			//Disturbance Observer
+			for(i=2; i<4; i++) disturbanceObserver(&motor_control[i]);
+
+			for(i=2; i<4; i++) TMC4671_highLevel_setTorqueTargetA(i, motor_control[i].iq);
+
+
+
+			sweep.k++;
+
+			if(sweep.k >= 2000 &&  motor_control[2].phiDes < 0.000001 && motor_control[2].phiDes > -0.000001)  // stop
+			{
+				mode = MODE_POSITION;
+				stats = false;
+				sweep.k = 0;
+			}
 		}
 		else if(mode == MODE_POSITION)
 		{
+			if(sweep.k == 0)
+			{
+				motor_control[i].phi0 = TMC4671_highLevel_getPositionActualRad(i);
+				for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0098135132, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6037472896, 0.6430013423);
+				biquadReset(&motor_control[i].bqTrajPhi,    motor_control[i].phi0);
+				sweep.k++;
+			}
 
-
-			if(sweep.k < 20)
-				motor_control[2].phiIn = 0;
-			else if(sweep.k == 20)
-				motor_control[2].phiIn = 40*M_PI/180;
-			else if(sweep.k > 5000)
-				motor_control[2].phiIn = 0;
 
 			//Input filtering
-			// motor_control[2].phi = biquad(&motor_control[2].bqPhi, motor_control[2].phi);
+			for(i=2; i<4; i++) motor_control[i].phi = biquad(&motor_control[i].bqPhi, motor_control[i].phi);
 
 			//Trajectory
-			motor_control[2].phiInLimited = rateLimiter(&motor_control[2].limTrajPhi, motor_control[2].phiIn);
-			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi, motor_control[2].phiInLimited);
-			motor_control[2].omegaDes = biquad(&motor_control[2].bqTrajOmega, motor_control[2].phiDes);
-			motor_control[2].alphaDes = biquad(&motor_control[2].bqTrajAlpha, motor_control[2].omegaDes);
-			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi1, motor_control[2].phiDes);
-			motor_control[2].phiDes   = biquad(&motor_control[2].bqTrajPhi2, motor_control[2].phiDes);
-			motor_control[2].omegaDes = biquad(&motor_control[2].bqTrajOmega1, motor_control[2].omegaDes);
+			for(i=2; i<4; i++)motor_control[i].phiInLimited = rateLimiter(&motor_control[i].limTrajPhi, motor_control[i].phiIn);
+			for(i=2; i<4; i++)motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi, motor_control[i].phiInLimited);
+			for(i=2; i<4; i++)motor_control[i].omegaDes = biquad(&motor_control[i].bqTrajOmega, motor_control[i].phiDes);
+			for(i=2; i<4; i++)motor_control[i].alphaDes = biquad(&motor_control[i].bqTrajAlpha, motor_control[i].omegaDes);
+			for(i=2; i<4; i++)motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi1, motor_control[i].phiDes);
+			for(i=2; i<4; i++)motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi2, motor_control[i].phiDes);
+			for(i=2; i<4; i++)motor_control[i].omegaDes = biquad(&motor_control[i].bqTrajOmega1, motor_control[i].omegaDes);
 
-
-			disturbanceObserver(&motor_control[2]);
-
-
-			motor_data[2].torqueTarget = (int32_t)(500.0*motor_control[2].iq);
-			tmc4671_setTargetTorque_raw(2, motor_data[2].torqueTarget);
+			//Disturbance Observer
+			for(i=2; i<4; i++) disturbanceObserver(&motor_control[i]);
+			for(i=2; i<4; i++) TMC4671_highLevel_setTorqueTargetA(i, motor_control[i].iq);
 
 
 
-
-			for (i = 2; i < 4; i++) data1[sweep.k].phiIn[i-2]  	 		= motor_control[i].phiIn;
-			for (i = 2; i < 4; i++) data2[sweep.k].phiInLimited[i-2] 	= motor_control[i].phiInLimited;
-			for (i = 2; i < 4; i++) data2[sweep.k].phiDes[i-2]   		= motor_control[i].phiDes;
-			for (i = 2; i < 4; i++) data2[sweep.k].omegaDes[i-2] 		= motor_control[i].omegaDes;
-			for (i = 2; i < 4; i++) data2[sweep.k].alphaDes[i-2] 		= motor_control[i].alphaDes;
-			for (i = 2; i < 4; i++) data1[sweep.k].phi[i-2]  	 		= motor_control[i].phi;
-			for (i = 2; i < 4; i++) data1[sweep.k].alphaM[i-2]  	 	= motor_control[i].alphaM;
-			for (i = 2; i < 4; i++) data1[sweep.k].iq[i-2]       		= motor_control[i].iq;
-			for (i = 2; i < 4; i++) data1[sweep.k].phiEst[i-2]  	 	= motor_control[i].phiEst;
-			for (i = 2; i < 4; i++) data1[sweep.k].omegaEst[i-2]  	 	= motor_control[i].omegaEst;
-			for (i = 2; i < 4; i++) data1[sweep.k].alphaEst[i-2]       	= motor_control[i].alphaEst;
-			for (i = 2; i < 4; i++) data1[sweep.k].alphaFrict[i-2]      = motor_control[i].alphaFrict;
-
-
-			if(sweep.k >= (DATA_N-1)) // stop
-		    {
-		        mode = MODE_STOP;
-		        stats = true;
-				// rate = 1;
-
-		        if(mode_matlab)
-				{
-		            snprintf(string, 200, 	"fintest\n");
-					HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
-		    	}
-		    }
-			sweep.k++;
 		}
 
 
@@ -419,9 +472,9 @@ void logic_loop(void)
 			mode = MODE_STOP;
 			stats = true;
 			// rate = 1;
-			for (i = 0; i < 4; i++) tmc4671_setTargetFlux_raw(2, 0);
-			for (i = 0; i < 4; i++) tmc4671_setTargetTorque_raw(2, 0);
-			for (i = 0; i < 4; i++) tmc4671_switchToMotionMode(i, TMC4671_MOTION_MODE_STOPPED);
+			for (i = 0; i < 4; i++) TMC4671_highLevel_setTorqueTarget(2, 0);
+			for (i = 0; i < 4; i++) TMC4671_highLevel_setFluxTarget(2, 0);
+			for (i = 0; i < 4; i++) TMC4671_highLevel_stoppedMode(i);
 			break;
 
 		case 'i':
@@ -435,53 +488,36 @@ void logic_loop(void)
 			sweep.Ta = TA;
 			stats = false;
 
-			for (i = 0; i < 4; i++) rateLimiterInit(&motor_control[i].limTrajPhi, 100, 0);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0098135136, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6037472486, 0.6430013180);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega,  2444.0617675781, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajAlpha,  2444.0617675781, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi1,   0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi2,   0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega1, 0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqPhi, 0.2390572280, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, -0.5218855739, 0.0000000000);
-			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_STOPPED);
+			for (i = 0; i < 4; i++) TMC4671_highLevel_stoppedMode(i);
 			break;
-
-		// case '2':
-		// 	mode = MODE_TORQUE;
-		// 	for (i = 0; i < 4; i++) motor_control[i].iq = 10;
-		// 	tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
-		// 	tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-		// 	tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-		// 	tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_STOPPED);
-		// 	break;
 
 
 		case '2':
-			mode = MODE_POSITION;
+			mode = MODE_POSITION_INIT_M3;
 			sweep.k = 0;
 			sweep.Ta = TA;
 			stats = false;
 
-			for (i = 0; i < 4; i++) motor_control[i].iq = 0;
-			tmc4671_writeInt(2, TMC4671_PID_POSITION_ACTUAL, 0);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0000098079, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.9874729842, 0.9875122157);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega,  2444.0618814066, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309407, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajAlpha,  2444.0618814066, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309407, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi1,   0.6110154704, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309407, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi2,   0.6110154704, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309407, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega1, 0.6110154704, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309407, 0.0000000000);
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqPhi,        0.4399008465, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, -0.1201983070, 0.0000000000);
 
-			for (i = 0; i < 4; i++) rateLimiterInit(&motor_control[i].limTrajPhi, 100, 0);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0098135136, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6037472486, 0.6430013180);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega,  2444.0617675781, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajAlpha,  2444.0617675781, 1.0000000000, -1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi1,   0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi2,   0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega1, 0.6110154986, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309377, 0.0000000000);
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqPhi, 0.4399008453, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, -0.1201983094, 0.0000000000);
 			disturbanceObserverInit(&motor_control[2], 2450.4422698000, 2249282.8430082649, 916607551.2230231762, 139918418361.2410888672, 3553.0575843922, 119.3805208364, 790.0960095481);
+			disturbanceObserverInit(&motor_control[3], 2450.4422698000, 2249282.8430082649, 916607551.2230231762, 139918418361.2410888672, 3553.0575843922, 119.3805208364, 493.3781002056);
 
-			tmc4671_switchToMotionMode(0, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(1, TMC4671_MOTION_MODE_STOPPED);
-			tmc4671_switchToMotionMode(2, TMC4671_MOTION_MODE_TORQUE);
-			tmc4671_switchToMotionMode(3, TMC4671_MOTION_MODE_STOPPED);
+
+			for (i = 0; i < 4; i++) TMC4671_highLevel_setFluxTarget(2, 0);
+			for (i = 0; i < 4; i++) TMC4671_highLevel_setTorqueTarget(2, 0);
+			TMC4671_highLevel_stoppedMode(0);
+			TMC4671_highLevel_stoppedMode(1);
+			TMC4671_highLevel_torqueMode(2);
+			// TMC4671_highLevel_stoppedMode(2);
+			// TMC4671_highLevel_stoppedMode(3);
+			TMC4671_highLevel_torqueMode(3);
 			break;
 
 
@@ -540,14 +576,19 @@ void logic_loop(void)
 
 
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if (htim->Instance == TIM5)
+	{
+		Ta_counter++;
+	}
 
+}
 
 
 void HAL_SYSTICK_Callback(void)
 {
 	systick_counter++;
-	systick_counter_2++;
-	systick_counter_3++;
 
 	// error led
 	if (swdriver_getStatus(0) || swdriver_getStatus(1) || swdriver_getStatus(2) || swdriver_getStatus(3) ||

@@ -25,26 +25,6 @@ typedef struct biquad_s
     float gain;
 } biquad_t;
 
-typedef struct pid_controller_s
-{
-    float x[2];
-    float limit;
-    float A[2][2];
-    float B[2];
-    float C[2];
-    float D;
-    float kb;
-} pid_controller_t;
-
-typedef struct pi_controller_s
-{
-    float x;
-    float limit;
-    float A;
-    float B;
-    float C;
-    float D;
-} pi_controller_t;
 
 typedef struct limiter_s
 {
@@ -73,6 +53,8 @@ dob_t;
 
 typedef struct control_s
 {
+    float phi0;
+
     float phiIn;
     float phiInLimited;
 
@@ -108,6 +90,7 @@ typedef struct control_s
 
     float CmEst;
 
+
     float iq;
 } control_t;
 
@@ -122,44 +105,55 @@ typedef struct motor_s
 
 
 float biquad(biquad_t* bq, float in);
-void  biquadReset(biquad_t* bq);
+void  biquadReset(biquad_t* bq, float init);
 void  biquadInit(biquad_t* bq, float gain, float b0, float b1, float b2, float a0, float a1, float a2);
+
 
 float rateLimiter(limiter_t* limiter, float in);
 void  rateLimiterInit(limiter_t* limiter, float r, float out_);
 
-// void disturbanceObserver(dob_t* dob, float phi, float alpha_M);
-// void disturbanceObserver(dob_t* dob, float phi, float alphaM, float* phiEst, float* omegaEst, float* alphaEst, float* alphaFrict, float* ePhi);
-// void disturbanceObserverInit(dob_t* dob, float ke1, float ke2, float ke3, float keI);
 void disturbanceObserverInit(control_t* ctrl, float ke1, float ke2, float ke3, float keI, float kFB0, float kFB1, float CmEst);
 void disturbanceObserver(control_t* ctrl);
-
-
-
-float PIDControl(pid_controller_t* pid, float e);
-float PIControl(pi_controller_t* pi, float e);
-void PIControlReset(pi_controller_t* pi);
-void PIControlSetup(pi_controller_t* pi, float a, float b, float c, float d, float limit, float x);
-
-
-void velocityController(uint8_t drv);
-void positionController(uint8_t drv);
-
-
-float sat(float x);
-void print_data_int(int32_t data , uint8_t* string);
-void print_data_float(float data , uint8_t* string);
-
+void disturbanceObserverResetCm(control_t* ctrl, float CmEst);
+void disturbanceObserverResetPhi0(control_t* ctrl, float phi0);
 
 float calcTorqueAlphaBeta(uint8_t drv, float angleAlpha, float torqueAlpha);
 float calcAngleBetaAlpha(uint8_t drv, float angleBeta);
 float clacAngleVelocityBetaAlpha(uint8_t drv, float angleBeta, float velocityBeta);
 float calcAngleTarget(uint8_t drv, float* angleIn);
 
+float sat(float x);
+void print_data_int(int32_t data , uint8_t* string);
+void print_data_float(float data , uint8_t* string);
 
 
 
 
 
+// typedef struct pid_controller_s
+// {
+//     float x[2];
+//     float limit;
+//     float A[2][2];
+//     float B[2];
+//     float C[2];
+//     float D;
+//     float kb;
+// } pid_controller_t;
+//
+// typedef struct pi_controller_s
+// {
+//     float x;
+//     float limit;
+//     float A;
+//     float B;
+//     float C;
+//     float D;
+// } pi_controller_t;
+//
+// float PIDControl(pid_controller_t* pid, float e);
+// float PIControl(pi_controller_t* pi, float e);
+// void PIControlReset(pi_controller_t* pi);
+// void PIControlSetup(pi_controller_t* pi, float a, float b, float c, float d, float limit, float x);
 
 #endif /* LOGIC_HELPER_H_ */

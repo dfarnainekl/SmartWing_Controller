@@ -11,9 +11,25 @@ void tmc6200_highLevel_init(uint8_t drv)
 
 }
 
-void tmc6200_highLeve_resetErrorFlags(uint8_t drv)
+void tmc6200_highLevel_resetErrorFlags(uint8_t drv)
 {
 	//reset status register if no error has occured
 	if( tmc6200_readInt(drv, TMC6200_GSTAT) == 1 )
 		tmc6200_writeInt(drv, TMC6200_GSTAT, (1 << TMC6200_RESET_SHIFT));		// clear reset bit
+}
+
+
+int16_t tmc6200_highLevel_getRegisterGSTAT(uint8_t drv)
+{
+	return tmc6200_readInt(drv, TMC6200_GSTAT);
+}
+
+int16_t tmc6200_highLevel_getRegisterGCONF(uint8_t drv)
+{
+	return tmc6200_readInt(drv, TMC6200_GCONF);
+}
+
+int16_t tmc6200_highLevel_getRegisterDRV_CONF(uint8_t drv)
+{
+	return tmc6200_readInt(drv, TMC6200_DRV_CONF);
 }

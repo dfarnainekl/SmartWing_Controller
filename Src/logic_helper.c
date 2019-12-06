@@ -29,63 +29,31 @@ void rateLimiterInit(limiter_t* limiter, float r, float out_)
 }
 
 
-// void disturbanceObserver(dob_t* dob, float phi, float alphaM)
-// {
-// 	dob->ePhi = phi - dob->phiEst_int;
-// 	dob->ePhi_int 			= dob->ePhi_int 		+ TA *  dob->ePhi;
-// 	dob->alphaFrict_int 	= dob->alphaFrict_int 	+ TA * (dob->ke3*dob->ePhi + dob->keI*dob->ePhi_int);
-//
-// 	dob->alphaEst = dob->ke2*dob->ePhi + dob->alphaFrict_int + alphaM;
-// 	dob->omegaEst_int 	= dob->omegaEst_int 	+ TA *  dob->alphaEst;
-// 	dob->phiEst_int 	= dob->phiEst_int 		+ TA * (dob->ke1*dob->ePhi + dob->omegaEst_int);
-// }
-
-
-// void disturbanceObserver(dob_t* dob, float phi, float alphaM, float* phiEst, float* omegaEst, float* alphaEst, float* alphaFrict, float* ePhi)
-// {
-// 	dob->ePhi = phi - dob->phiEst_int;
-// 	dob->ePhi_int 			= dob->ePhi_int 		+ TA *  dob->ePhi;
-// 	dob->alphaFrict_int 	= dob->alphaFrict_int 	+ TA * (dob->ke3*dob->ePhi + dob->keI*dob->ePhi_int);
-//
-// 	dob->alphaEst = dob->ke2*dob->ePhi + dob->alphaFrict_int + alphaM;
-// 	dob->omegaEst_int 	= dob->omegaEst_int 	+ TA *  dob->alphaEst;
-// 	dob->phiEst_int 	= dob->phiEst_int 		+ TA * (dob->ke1*dob->ePhi + dob->omegaEst_int);
-//
-// 	*phiEst 	= dob->phiEst_int;
-// 	*omegaEst 	= dob->omegaEst_int;
-// 	*alphaEst 	= dob->alphaEst;
-// 	*alphaFrict = dob->alphaFrict_int;
-// 	*ePhi 		= dob->ePhi;
-// }
-
-
 void disturbanceObserver(control_t* ctrl)
 {
 	dob_t* dob = &ctrl->dob;
 
-	dob->ePhi = ctrl->phi - dob->phiEst_int;
-	dob->ePhi_int 			= dob->ePhi_int 		+ TA *  dob->ePhi;
-	dob->alphaFrict_int 	= dob->alphaFrict_int 	+ TA * (dob->ke3*dob->ePhi + dob->keI*dob->ePhi_int);
+	dob->ePhi 			= ctrl->phi - dob->phiEst_int;
+	dob->ePhi_int 		= dob->ePhi_int 		+ TA *  dob->ePhi;
+	dob->alphaFrict_int = dob->alphaFrict_int 	+ TA * (dob->ke3*dob->ePhi + dob->keI*dob->ePhi_int);
 
-	dob->alphaEst = dob->ke2*dob->ePhi + dob->alphaFrict_int + ctrl->alphaM;
+	dob->alphaEst 		= dob->ke2*dob->ePhi + dob->alphaFrict_int + ctrl->alphaM;
 	dob->omegaEst_int 	= dob->omegaEst_int 	+ TA *  dob->alphaEst;
 	dob->phiEst_int 	= dob->phiEst_int 		+ TA * (dob->ke1*dob->ePhi + dob->omegaEst_int);
 
+	//estimated states
 	ctrl->phiEst 		= dob->phiEst_int;
 	ctrl->omegaEst 		= dob->omegaEst_int;
 	ctrl->alphaEst 		= dob->alphaEst;
 	ctrl->alphaFrict 	= dob->alphaFrict_int;
 	ctrl->ePhi 			= dob->ePhi;
 
-
-
+	//outputs
 	ctrl->alphaM =    ctrl->kFB0 * ( ctrl->phiDes   - ctrl->phiEst )
 					+ ctrl->kFB1 * ( ctrl->omegaDes - ctrl->omegaEst )
 					+ ctrl->alphaDes
 					- ctrl->alphaFrict;
 	ctrl->iq = ctrl->alphaM / ctrl->CmEst;
-
-	// return 	ctrl->iq;
 }
 
 
@@ -111,6 +79,16 @@ void disturbanceObserverInit(control_t* ctrl, float ke1, float ke2, float ke3, f
 	ctrl->CmEst = CmEst;
 }
 
+void disturbanceObserverResetCm(control_t* ctrl, float CmEst)
+{
+	ctrl->CmEst = CmEst;
+}
+
+void disturbanceObserverResetPhi0(control_t* ctrl, float phi0)
+{
+	dob_t* dob = &ctrl->dob;
+	dob->phiEst_int= phi0;
+}
 
 
 float biquad(biquad_t* bq, float in)
@@ -127,10 +105,11 @@ float biquad(biquad_t* bq, float in)
 
 	return out;
 }
-void biquadReset(biquad_t* bq)
+
+void  biquadReset(biquad_t* bq, float init)
 {
-	bq->w1 = 0;
-	bq->w2 = 0;
+	bq->w1 = init/(bq->a0+bq->a1+bq->a2);
+	bq->w2 = init/(bq->a0+bq->a1+bq->a2);
 }
 
 void biquadInit(biquad_t* bq, float gain, float b0, float b1, float b2, float a0, float a1, float a2)
@@ -139,76 +118,9 @@ void biquadInit(biquad_t* bq, float gain, float b0, float b1, float b2, float a0
 	bq->b0 = b0;
 	bq->b1 = b1;
 	bq->b2 = b2;
-	bq->a1 = a0;
+	bq->a0 = a0;
 	bq->a1 = a1;
 	bq->a2 = a2;
-	biquadReset(bq);
-}
-
-
-float PIDControl(pid_controller_t* pid, float e)
-{
-	float out = 0;
-	float deltaOut = 0;
-
-	out = pid->C[0]*pid->x[0]+pid->C[1]*pid->x[1]  +  pid->D*e;
-
-	if(out > pid->limit)
-	{
-        deltaOut = pid->limit - out;
-		out = pid->limit;
-	}
-    else if(out < -pid->limit)
-	{
-	    deltaOut = -pid->limit - out;
-		out = -pid->limit;
-	}
-	else
-	{
-	    deltaOut = 0;
-	}
-
-	pid->x[0] = pid->A[0][0]*pid->x[0] + pid->A[0][1]*pid->x[1] + pid->B[0]*(e + pid->kb*deltaOut);
-	pid->x[1] = pid->A[1][0]*pid->x[0] + pid->A[1][1]*pid->x[1] + pid->B[1]*(e + pid->kb*deltaOut);
-
-	return out;
-}
-
-float PIControl(pi_controller_t* pi, float e)
-{
-    float out = 0;
-
-	out = pi->C*pi->x + pi->D*e;
-
-	if(out > pi->limit)
-	{
-		pi->x =  (pi->limit - pi->D*e) / pi->C;
-		out = pi->limit;
-	}
-	else if(out < -pi->limit)
-	{
-		pi->x = (-pi->limit - pi->D*e) / pi->C;
-		out = -pi->limit;
-	}
-	else
-	{
-		pi->x = pi->A*pi->x + pi->B*e;
-	}
-
-	return out;
-}
-void PIControlSetup(pi_controller_t* pi, float a, float b, float c, float d, float limit, float x)
-{
-	pi->A = a;
-	pi->B = b;
-	pi->C = c;
-	pi->D = d;
-	pi->x = x;
-	pi->limit = limit;
-}
-void PIControlReset(pi_controller_t* pi)
-{
-	pi->x = 0;
 }
 
 
@@ -293,83 +205,6 @@ float calcAngleBetaAlpha(uint8_t drv, float angleBeta) // in degree
 
 	return angleAlpha;
 }
-
-
-
-void velocityController(uint8_t drv)
-{
-	// float A_PI = 1;
-	// float B_PI = 16;
-	// float C_PI = 15.6764221;
-	// float D_PI = 1.2241776e+03;
-	//
-	//
-	// static float velocityIntegratorLimit = 50000;
-	//
-	//
-	// motor_control[drv].velocityErrorGamma = motor_control[drv].velocityTargetGamma - motor_control[drv].velocityActualGamma;
-	//
-	// motor_control[drv].torqueTargetLimitedGamma = C_PI * motor_control[drv].velocityIntegratorValueGamma + D_PI * motor_control[drv].velocityErrorGamma;
-	//
-	// if (motor_control[drv].torqueTargetLimitedGamma > velocityIntegratorLimit)
-	// {
-	// 	motor_control[drv].velocityIntegratorValueGamma = ((velocityIntegratorLimit - D_PI*motor_control[drv].velocityErrorGamma) / C_PI);
-	// 	motor_control[drv].torqueTargetLimitedGamma = velocityIntegratorLimit;
-	// }
-	// else if (motor_control[drv].torqueTargetLimitedGamma < (-velocityIntegratorLimit))
-	// {
-	// 	motor_control[drv].velocityIntegratorValueGamma = ((-velocityIntegratorLimit - D_PI*motor_control[drv].velocityErrorGamma) / C_PI);
-	// 	motor_control[drv].torqueTargetLimitedGamma = -velocityIntegratorLimit;
-	// }
-	// else
-	// {
-	// 	motor_control[drv].velocityIntegratorValueGamma =  A_PI*motor_control[drv].velocityIntegratorValueGamma + B_PI*motor_control[drv].velocityErrorGamma;
-	// }
-	//
-	//
-	// //matched
-	// // float coeffs1[6] = {1.0000000,	-1.7683651,	0.7704546,	1.0000000,	-1.7843640,	0.7892329};
-	// // float coeffs2[6] = {1.0000000,	-1.9798883,	0.9853169,	1.0000000,	-0.9999964,	0.0000000};
-	// // float coeffs3[6] = {1.0000000,	-1.9301999,	0.9322069,	1.0000000,	-1.9671578,	0.9685792};
-	// // float coeffs4[6] = {1.0000000,	-1.9824102,	0.9838421,	1.0000000,	-1.9835303,	0.9855943};
-	// // float gain = 0.2195863;
-	//
-	// //static biquad_t bq2, bq3, bq4;
-	//
-	// //biquadInit(bq1, (float[]){1.0000000,	-1.7683651,	0.7704546,	1.0000000,	-1.7843640,	0.7892329}, 1);
-	// // biquadInit(bq2, (float[]){1.0000000,	-1.9798883,	0.9853169,	1.0000000,	-0.9999964,	0.0000000}, 1);
-	// // biquadInit(bq3, (float[]){1.0000000,	-1.9301999,	0.9322069,	1.0000000,	-1.9671578,	0.9685792}, 1);
-	// // biquadInit(bq4, (float[]){1.0000000,	-1.9824102,	0.9838421,	1.0000000,	-1.9835303,	0.9855943}, 0.2195863);
-	//
-	// static biquad_t bq1 = {.coeff = {1.0000000,	-1.7683651,	0.7704546,	1.0000000,	-1.7843640,	0.7892329}, .gain = 1};
-	// static biquad_t bq2 = {.coeff = {1.0000000,	-1.9798883,	0.9853169,	1.0000000,	-0.9999964,	0.0000000}, .gain = 1};
-	// static biquad_t bq3 = {.coeff = {1.0000000,	-1.9301999,	0.9322069,	1.0000000,	-1.9671578,	0.9685792}, .gain = 1};
-	// static biquad_t bq4 = {.coeff = {1.0000000,	-1.9824102,	0.9838421,	1.0000000,	-1.9835303,	0.9855943}, .gain = 0.2195863};
-	//
-	//
-	//
-	//
-	// float bq_intermediate1  = biquad(motor_control[drv].torqueTargetLimitedGamma, 	bq1);
-	// float bq_intermediate2  = biquad(bq_intermediate1,   						 	bq2);
-	// float bq_intermediate3  = biquad(bq_intermediate2,     							bq3);
-	// motor_control[drv].torqueTargetGamma = biquad(bq_intermediate3,     			bq4);
-
-}
-
-
-
-
-
-void positionController(uint8_t drv)
-{
-	// float coeffs[6] = {1.0000000,	-1.2987443,	0.2987663,	1.0000000,	-0.7779691,	-0.2220309};
-	// float gain = 0.5108376;
-
-	//motor_control[drv].positionErrorGamma = motor_control[drv].positionTargetGamma - motor_control[drv].positionActualGamma;
-
- 	//motor_control[drv].velocityTargetGamma = biquad(motor_control[drv].positionErrorGamma, coeffs, gain, motor_control[drv].bq_pos_delay1);
-}
-
 
 
 float calcTorqueAlphaBeta(uint8_t drv, float angleAlpha, float torqueAlpha)
@@ -476,3 +311,70 @@ void print_data_float(float data , uint8_t* string)
 
 	memcpy(string, thing.bytes, 4);
 }
+
+
+
+// float PIDControl(pid_controller_t* pid, float e)
+// {
+// 	float out = 0;
+// 	float deltaOut = 0;
+//
+// 	out = pid->C[0]*pid->x[0]+pid->C[1]*pid->x[1]  +  pid->D*e;
+//
+// 	if(out > pid->limit)
+// 	{
+//         deltaOut = pid->limit - out;
+// 		out = pid->limit;
+// 	}
+//     else if(out < -pid->limit)
+// 	{
+// 	    deltaOut = -pid->limit - out;
+// 		out = -pid->limit;
+// 	}
+// 	else
+// 	{
+// 	    deltaOut = 0;
+// 	}
+//
+// 	pid->x[0] = pid->A[0][0]*pid->x[0] + pid->A[0][1]*pid->x[1] + pid->B[0]*(e + pid->kb*deltaOut);
+// 	pid->x[1] = pid->A[1][0]*pid->x[0] + pid->A[1][1]*pid->x[1] + pid->B[1]*(e + pid->kb*deltaOut);
+//
+// 	return out;
+// }
+//
+// float PIControl(pi_controller_t* pi, float e)
+// {
+//     float out = 0;
+//
+// 	out = pi->C*pi->x + pi->D*e;
+//
+// 	if(out > pi->limit)
+// 	{
+// 		pi->x =  (pi->limit - pi->D*e) / pi->C;
+// 		out = pi->limit;
+// 	}
+// 	else if(out < -pi->limit)
+// 	{
+// 		pi->x = (-pi->limit - pi->D*e) / pi->C;
+// 		out = -pi->limit;
+// 	}
+// 	else
+// 	{
+// 		pi->x = pi->A*pi->x + pi->B*e;
+// 	}
+//
+// 	return out;
+// }
+// void PIControlSetup(pi_controller_t* pi, float a, float b, float c, float d, float limit, float x)
+// {
+// 	pi->A = a;
+// 	pi->B = b;
+// 	pi->C = c;
+// 	pi->D = d;
+// 	pi->x = x;
+// 	pi->limit = limit;
+// }
+// void PIControlReset(pi_controller_t* pi)
+// {
+// 	pi->x = 0;
+// }
