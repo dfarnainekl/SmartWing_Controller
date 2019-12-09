@@ -26,7 +26,8 @@
 #define MODE_POSITION_INIT_M3	4
 #define MODE_POSITION_INIT_M2	5
 #define MODE_IDLE				6
-#define MODE_RCCONTROL			7
+#define MODE_POSITION_STEP		7
+
 
 
 typedef enum
