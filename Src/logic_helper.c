@@ -48,18 +48,42 @@ void disturbanceObserver(control_t* ctrl)
 	ctrl->alphaFrict 	= dob->alphaFrict_int;
 	ctrl->ePhi 			= dob->ePhi;
 
+	// ctrl->phiEst = biquad(&(ctrl->bqNotch1), ctrl->phiEst);
+	// ctrl->omegaEst = biquad(&(ctrl->bqNotch2), ctrl->omegaEst);
+
 	//outputs
 	ctrl->alphaM =    ctrl->kFB0 * ( ctrl->phiDes   - ctrl->phiEst )
 					+ ctrl->kFB1 * ( ctrl->omegaDes - ctrl->omegaEst )
 					+ ctrl->alphaDes
 					- ctrl->alphaFrict;
+
+	// ctrl->alphaM = biquad(&(ctrl->bqNotch), ctrl->alphaM);
+
+
+	if(ctrl->alphaM > I_LIMIT * ctrl->CmEst)
+		ctrl->alphaM = I_LIMIT * ctrl->CmEst;
+	else if(ctrl->alphaM < -I_LIMIT * ctrl->CmEst)
+		ctrl->alphaM = -I_LIMIT * ctrl->CmEst;
+
 	ctrl->iq = ctrl->alphaM / ctrl->CmEst;
 }
 
 
 
-void disturbanceObserverInit(control_t* ctrl, float ke1, float ke2, float ke3, float keI, float kFB0, float kFB1, float CmEst)
+void disturbanceObserverInit(control_t* ctrl, float fOBS, float fFB, float CmEst)
 {
+	float z1[4] = {-2*M_PI*fOBS*0.9, -2*M_PI*fOBS*0.95, -2*M_PI*fOBS*1, -2*M_PI*fOBS*1.05};
+	float p1[5] = {0}; p1[0] = 1;
+	float p1_[5];
+	float z2[2] = {-2*M_PI*fFB*0.9, -2*M_PI*fFB*1};
+	float p2[3] = {0}; p2[0] = 1;
+	float p2_[3];
+	uint8_t i, j;
+
+
+	ctrl->fOBS = fOBS;
+	ctrl->fFB = fFB;
+
 	dob_t* dob = &ctrl->dob;
 
 
@@ -68,15 +92,40 @@ void disturbanceObserverInit(control_t* ctrl, float ke1, float ke2, float ke3, f
     dob->phiEst_int= 0;
     dob->alphaFrict_int = 0;
 
-	dob->ke1 = ke1;
-	dob->ke2 = ke2;
-	dob->ke3 = ke3;
-	dob->keI = keI;
 
-	ctrl->kFB0 = kFB0;
-	ctrl->kFB1 = kFB1;
+
+	for(i=1; i<=4; i++)
+	{
+		for(j=1; j<=i; j++)
+			p1_[j] = p1[j]-z1[i-1]*p1[j-1];
+		for(j=1; j<=i; j++)
+			p1[j] =p1_[j];
+	}
+
+	dob->ke1 = p1[1];
+	dob->ke2 = p1[2];
+	dob->ke3 = p1[3];
+	dob->keI = p1[4];
+
+
+	for(i=1; i<=2; i++)
+	{
+		for(j=1; j<=i; j++)
+			p2_[j] = p2[j]-z2[i-1]*p2[j-1];
+		for(j=1; j<=i; j++)
+			p2[j] =p2_[j];
+	}
+
+	ctrl->kFB0 = p2[2];
+	ctrl->kFB1 = p2[1];
 
 	ctrl->CmEst = CmEst;
+
+	// static char string[256];
+	// uint16_t len = snprintf(string, 256, "\n\n\np1[0] = %f\np1[1] = %f\np1[2] = %f\np1[3] = %f\np1[4] = %f\n\np2[0] = %f\np2[1] = %f\np2[2] = %f\n\n\n\n", p1[0], p1[1], p1[2], p1[3], p1[4], p2[0], p2[1], p2[2]);
+	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
+	// HAL_Delay(5000);
+
 }
 
 void disturbanceObserverResetCm(control_t* ctrl, float CmEst)
@@ -124,54 +173,6 @@ void biquadInit(biquad_t* bq, float gain, float b0, float b1, float b2, float a0
 }
 
 
-float clacAngleVelocityBetaAlpha(uint8_t drv, float angleBeta, float velocityBeta)
-{
-	float veloctyAlpha = 0;
-	float dalphadbeta = 0;
-	float angleBetaSat = 0;
-
-	if(angleBeta > 50.0)
-		angleBetaSat = 50.0;
-	else if(angleBeta < -50.0)
-		angleBetaSat = -50.0;
-	else
-		angleBetaSat = angleBeta;
-
-	if (drv == 0)
-	{
-		veloctyAlpha = velocityBeta/2.0;
-	}
-	else if (drv == 2)
-	{
-		veloctyAlpha = velocityBeta/2.0;
-	}
-	else if (drv == 1)
-	{
-		angleBetaSat = -angleBetaSat;
-		dalphadbeta =     0.400935427396172939e0
-						+(-0.151316755738938497e-3) * angleBetaSat
-						+(-0.903150716409656768e-5) * angleBetaSat * angleBetaSat
-						+(-0.138545436985387085e-7) * pow(angleBetaSat, 3)
-						+  0.177013373152695001e-9  * pow(angleBetaSat, 4)
-						+  0.441290283747026576e-12 * pow(angleBetaSat, 5)
-						+(-0.543487101064459958e-13)* pow(angleBetaSat, 6) ;
-
-		veloctyAlpha = dalphadbeta * (velocityBeta/2.0) ;
-	}
-	else if (drv == 3)
-	{
-		dalphadbeta =     0.400935427396172939e0
-						+(-0.151316755738938497e-3) * angleBetaSat
-						+(-0.903150716409656768e-5) * angleBetaSat * angleBetaSat
-						+(-0.138545436985387085e-7) * pow(angleBetaSat, 3)
-						+  0.177013373152695001e-9  * pow(angleBetaSat, 4)
-						+  0.441290283747026576e-12 * pow(angleBetaSat, 5)
-						+(-0.543487101064459958e-13)* pow(angleBetaSat, 6) ;
-		dalphadbeta = 1;
-		veloctyAlpha = dalphadbeta * (velocityBeta/2.0) ;
-	}
-	return veloctyAlpha;
-}
 
 float calcAngleBetaAlpha(uint8_t drv, float angleBeta) // in degree
 {

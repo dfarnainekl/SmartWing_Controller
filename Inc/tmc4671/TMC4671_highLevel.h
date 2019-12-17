@@ -40,6 +40,8 @@ float TMC4671_highLevel_getPositionActualRad(uint8_t drv);
 
 int16_t TMC4671_highLevel_getPhiE(uint8_t drv);
 int16_t TMC4671_highLevel_getPhiM(uint8_t drv);
+int16_t TMC4671_highLevel_getPhiEOffset(uint8_t drv);
+int16_t TMC4671_highLevel_getPhiMOffset(uint8_t drv);
 
 // void TMC4671_highLevel_positionMode_rampToZero(uint8_t drv);
 

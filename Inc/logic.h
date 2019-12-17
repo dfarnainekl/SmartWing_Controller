@@ -27,6 +27,9 @@
 #define MODE_POSITION_INIT_M2	5
 #define MODE_IDLE				6
 #define MODE_POSITION_STEP		7
+#define MODE_LIMIT				8
+#define MODE_RCCONTROL 			9
+#define MODE_SWEEP				10
 
 
 
@@ -47,6 +50,8 @@ typedef struct sweep_s
 	uint32_t k;
 	float r;
 	float t;
+	uint8_t rate;
+	uint8_t rate_counter;
 	MODE mode;
 	float out;
 } sweep_t;

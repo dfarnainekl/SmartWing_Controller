@@ -41,7 +41,11 @@ void TMC4671_highLevel_init(uint8_t drv)
 
 	//funtktioniert nicht
 	// tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, 0);
-	// tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M, 0);
+	//tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M, 0);
+	tmc4671_writeRegister16BitValue(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, BIT_16_TO_31, 0);
+	tmc4671_writeRegister16BitValue(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, BIT_0_TO_15, 0);
+	tmc4671_writeRegister16BitValue(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_16_TO_31, 0);
+	tmc4671_writeRegister16BitValue(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_0_TO_15, 0);
 
 
 	// Feedback selection
@@ -189,10 +193,20 @@ int16_t TMC4671_highLevel_getPhiM(uint8_t drv)
 	return tmc4671_readRegister16BitValue(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_0_TO_15);
 }
 
+int16_t TMC4671_highLevel_getPhiMOffset(uint8_t drv)
+{
+	return tmc4671_readRegister16BitValue(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, BIT_0_TO_15);
+}
+
 
 int16_t TMC4671_highLevel_getPhiE(uint8_t drv)
 {
 	return tmc4671_readRegister16BitValue(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M, BIT_16_TO_31);
+}
+
+int16_t TMC4671_highLevel_getPhiEOffset(uint8_t drv)
+{
+	return tmc4671_readRegister16BitValue(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, BIT_16_TO_31);
 }
 
 
@@ -216,12 +230,9 @@ float TMC4671_highLevel_getPositionActualRad(uint8_t drv)
 char* TMC4671_highLevel_getStatus(uint8_t drv)
 {
 	static char string[4][500];
-	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7);
-	bool enabled = (bool)tmc4671_readInt(drv, TMC4671_CONFIG_DATA);
 	uint16_t torque_flux_limit = tmc4671_readRegister16BitValue(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, BIT_0_TO_15);
 
 	snprintf(&string[drv][0], 500, 	"Drive %d\n", drv);
-	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Position-Filter [f]: %s\n",  enabled?"on":"off");
 	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Torque-Limit    [c]: %d\n",  torque_flux_limit);
 	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Encoder            : %d\n",   as5047U_getAngle(drv));
 	snprintf(&string[drv][0]+strlen(&string[drv][0]), 500-strlen(&string[drv][0]), "Position           : %ld\n",  TMC4671_highLevel_getPositionActual(drv));
