@@ -139,8 +139,8 @@ void logic_init(void)
 	TMC4671_highLevel_initEncoder(3);
 	HAL_Delay(100);
 
-	disturbanceObserverInit(&motor_control[2], 100, 3, 773.0006664650);
-	disturbanceObserverInit(&motor_control[3], 100, 3, 493.3781002056);
+	disturbanceObserverInit(&motor_control[2], F_OBS, F_FB, CM_M2);
+	disturbanceObserverInit(&motor_control[3], F_OBS, F_FB, CM_M3);
 
 	TMC4671_highLevel_pwmOff(0);
 	TMC4671_highLevel_pwmOff(1);
@@ -238,7 +238,17 @@ void logic_loop(void)
 			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
 			snprintf(string+strlen(string), 2000-strlen(string), "%s\n", limit?"***  LIMIT  ***":" - ");
 			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 2000-strlen(string), "Mode: %s\n", mode==MODE_STOP?"MODE_STOP":mode==MODE_POSITION?"MODE_POSITION":mode==MODE_POSITION_INIT_M3?"MODE_POSITION_INIT_M3":mode==MODE_POSITION_INIT_M2?"MODE_POSITION_INIT_M2":mode==MODE_LIMIT?"MODE_LIMIT":mode==MODE_POSITION_STEP?"MODE_POSITION_STEP":mode==MODE_RCCONTROL?"MODE_RCCONTROL":mode==MODE_SWEEP?"MODE_SWEEP":mode==MODE_IDLE?"MODE_IDLE":" *** UNKNOWN MODE *** ERROR ***");
+			snprintf(string+strlen(string), 2000-strlen(string), "Mode: %s\n",
+				mode==MODE_STOP?"MODE_STOP":
+				mode==MODE_POSITION?"MODE_POSITION":
+				mode==MODE_POSITION_INIT_M3?"MODE_POSITION_INIT_M3":
+				mode==MODE_POSITION_INIT_M2?"MODE_POSITION_INIT_M2":
+				mode==MODE_LIMIT?"MODE_LIMIT":
+				mode==MODE_POSITION_STEP?"MODE_POSITION_STEP":
+				mode==MODE_RCCONTROL?"MODE_RCCONTROL":
+				mode==MODE_SWEEP?"MODE_SWEEP":
+				mode==MODE_IDLE?"MODE_IDLE":
+				" *** UNKNOWN MODE *** ERROR ***");
 			HAL_UART_Transmit_IT(&huart3, (uint8_t*) string, strlen(string));
 		}
 	} // end of: if(systick_counter_3 >= 200) //5Hz
@@ -281,6 +291,7 @@ void logic_loop(void)
 		{
 			mode = MODE_LIMIT;
 			limit = true;
+
 		}
 		else if(phiAlpha[2]-phiAlpha[3] > 25.0 || phiAlpha[2]-phiAlpha[3] < -25.0)
 		{
@@ -297,10 +308,12 @@ void logic_loop(void)
 		if (mode == MODE_STOP)
 		{
 			for (i = 0; i < 4; i++) TMC4671_highLevel_stoppedMode(i);
+			init_done = false;
 		}
 		if (mode == MODE_LIMIT)
 		{
 			for (i = 0; i < 4; i++) TMC4671_highLevel_stoppedMode(i);
+			init_done = false;
 		}
 		else if(mode == MODE_IDLE)
 		{
@@ -335,9 +348,10 @@ void logic_loop(void)
 				biquadReset(&motor_control[i].bqTrajPhi2,   motor_control[i].phi0);
 				biquadReset(&motor_control[i].bqTrajOmega1, 0);
 				biquadReset(&motor_control[i].bqPhi,        motor_control[i].phi0);
-				biquadReset(&motor_control[i].bqNotch,    0);
-				biquadReset(&motor_control[i].bqNotch1,    0);
-				biquadReset(&motor_control[i].bqNotch2,    0);
+				biquadReset(&motor_control[i].bqQ1,    0);
+				biquadReset(&motor_control[i].bqQ2,    0);
+				biquadReset(&motor_control[i].bqQ3,    0);
+				biquadReset(&motor_control[i].bqQ4,    0);
 
 				disturbanceObserverResetPhi0(&motor_control[i], motor_control[i].phi0);
 			}
@@ -394,9 +408,10 @@ void logic_loop(void)
 				biquadReset(&motor_control[i].bqTrajPhi2,   motor_control[i].phi0);
 				biquadReset(&motor_control[i].bqTrajOmega1, 0);
 				biquadReset(&motor_control[i].bqPhi,        motor_control[i].phi0);
-				biquadReset(&motor_control[i].bqNotch,    0);
-				biquadReset(&motor_control[i].bqNotch1,    0);
-				biquadReset(&motor_control[i].bqNotch2,    0);
+				biquadReset(&motor_control[i].bqQ1,    0);
+				biquadReset(&motor_control[i].bqQ2,    0);
+				biquadReset(&motor_control[i].bqQ3,    0);
+				biquadReset(&motor_control[i].bqQ4,    0);
 
 
 				disturbanceObserverResetPhi0(&motor_control[i], motor_control[i].phi0);
@@ -422,8 +437,12 @@ void logic_loop(void)
 			for(i=2; i<4; i++)motor_control[i].phiDes   = biquad(&motor_control[i].bqTrajPhi2, motor_control[i].phiDes);
 			for(i=2; i<4; i++)motor_control[i].omegaDes = biquad(&motor_control[i].bqTrajOmega1, motor_control[i].omegaDes);
 
+
+
 			//Disturbance Observer
 			for(i=2; i<4; i++) disturbanceObserver(&motor_control[i]);
+
+
 
 			for(i=2; i<4; i++) TMC4671_highLevel_setTorqueTargetA(i, motor_control[i].iq);
 
@@ -458,8 +477,8 @@ void logic_loop(void)
 				//switch from 2Hz prefilter to ...
 				/*70Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0098135132, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6037472896, 0.6430013423);
 				/*50Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0053028263, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.7087179717, 0.7299292767);
-				/*30Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0020252849, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8199873376, 0.8280884773);
-				/*20Hz*/  for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0009277524, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8781638882, 0.8818748977);
+				/*30Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0020252849, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8199873376, 0.8280884773);
+				/*20Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0009277524, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8781638882, 0.8818748977);
 				/*10Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0002391674, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.9381398440, 0.9390965137);
 
 				biquadReset(&motor_control[i].bqTrajPhi,    motor_control[i].phi0);
@@ -525,10 +544,17 @@ void logic_loop(void)
 
 			}
 
+
+
 			if(sweep.mode == M2)
-				motor_control[2].alphaM = sweep.out;
+				motor_control[2].alphaM += sweep.out;
 			else if(sweep.mode == M3)
-				motor_control[3].alphaM = sweep.out;
+				motor_control[3].alphaM += sweep.out;
+
+			float alphaMold = motor_control[3].alphaM;
+
+			i = 3;
+			motor_control[i].alphaM  = biquad(&motor_control[i].bqQ1, motor_control[i].alphaM);
 
 			for(i=2; i<4; i++)	motor_control[i].iq = motor_control[i].alphaM / motor_control[i].CmEst;
 
@@ -558,6 +584,8 @@ void logic_loop(void)
 				for (i = 2; i < 4; i++) data1[sweep.k].omegaEst[i-2]  	 	= motor_control[i].omegaEst;
 				for (i = 2; i < 4; i++) data1[sweep.k].alphaEst[i-2]       	= motor_control[i].alphaEst;
 				for (i = 2; i < 4; i++) data1[sweep.k].alphaFrict[i-2]		= motor_control[i].alphaFrict;
+
+				 data1[sweep.k].alphaM[1] = alphaMold;
 
 				if(sweep.k >= (DATA_N-1)) // stop
 				{
@@ -723,20 +751,21 @@ void logic_loop(void)
 			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega1, 0.6110154704, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309407, 0.0000000000);
 			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqPhi,        0.4399008465, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, -0.1201983070, 0.0000000000);
 
-			// // biquadInit(&motor_control[2].bqNotch,      1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
-			// // biquadInit(&motor_control[2].bqNotch1,      1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
-			// // biquadInit(&motor_control[2].bqNotch2,      1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
-			//
-			//
-			// // /*8.7Hz*/biquadInit(&motor_control[2].bqNotch1,      0.8767447472, 1.0000000000, -1.8928095102, 0.9648543000, 1.0000000000, -1.6595108509, 0.7226756811);
-			// // /*8.7Hz*/biquadInit(&motor_control[2].bqNotch2,      0.8767447472, 1.0000000000, -1.8928095102, 0.9648543000, 1.0000000000, -1.6595108509, 0.7226756811);
-			//
-			// /* 11.5Hz */ biquadInit(&motor_control[2].bqNotch1,      0.9811463952, 1.0000000000, -1.9938943386, 0.9951960444, 1.0000000000, -1.9563022852, 0.9575794339);
-			// /* 11.5Hz */ biquadInit(&motor_control[2].bqNotch1,      0.9811463952, 1.0000000000, -1.9938943386, 0.9951960444, 1.0000000000, -1.9563022852, 0.9575794339);
-			// /*8.7Hz*/biquadInit(&motor_control[3].bqNotch2,      0.8767447472, 1.0000000000, -1.8928095102, 0.9648543000, 1.0000000000, -1.6595108509, 0.7226756811);
-			// /*8.7Hz*/biquadInit(&motor_control[3].bqNotch2,      0.8767447472, 1.0000000000, -1.8928095102, 0.9648543000, 1.0000000000, -1.6595108509, 0.7226756811);
-			//
-			// /*10Hz*/for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqNotch,      0.9445903301, 1.0000000000, -1.9911957979, 0.9921786785, 1.0000000000, -1.8808642626, 0.8817926645);
+			// /*50Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0055211947, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.7790823542, 0.8011671330);
+			// /*70Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0103548791, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6922185804, 0.7336380968);
+			// /*100Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0197895827, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.5645039861, 0.6436623168);
+			// /*500Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.2261536997, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -0.2809457379, 0.1855605367);
+			/*300Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.1175887057, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -0.8238649748, 0.2942197977);
+
+
+			// biquadInit(&motor_control[3].bqQ2,    0.9750000000, 1.0000000000, -1.9186667840, 0.9980010000, 1.0000000000, -1.8725726871, 0.9500000000);
+			// biquadInit(&motor_control[3].bqQ3,    0.9950000000, 1.0000000000, -1.9427951010, 0.9980010000, 1.0000000000, -1.9350161416, 0.9900000000);
+
+			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ2,    0.9600000000, 1.0000000000, -1.9363726866, 0.9960040000, 1.0000000000, -1.8626430653, 0.9200000000);
+
+
+			// biquadInit(&motor_control[2].bqQ2,    1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
+			biquadInit(&motor_control[2].bqQ3,    1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
 
 
 
@@ -790,7 +819,7 @@ void logic_loop(void)
 
 				sweep.k = 0;
 				sweep.mode = M3;
-				sweep.U =2*motor_control[2].CmEst;
+				sweep.U =0.5*motor_control[2].CmEst;
 				sweep.omegaStart = 2 * M_PI * 20;
 				sweep.omegaEnd = 2 * M_PI * 3;
 				stats = false;
@@ -808,9 +837,9 @@ void logic_loop(void)
 
 				sweep.k = 0;
 				sweep.mode = M3;
-				sweep.U = 3*motor_control[2].CmEst;
+				sweep.U = 2*motor_control[2].CmEst;
 				sweep.omegaStart = 2 * M_PI * 5;
-				sweep.omegaEnd = 2 * M_PI * 50;
+				sweep.omegaEnd = 2 * M_PI * 30;
 				stats = false;
 			}
 			break;
@@ -826,12 +855,13 @@ void logic_loop(void)
 
 				sweep.k = 0;
 				sweep.mode = M3;
-				sweep.U = 5*motor_control[2].CmEst;
+				sweep.U = 4*motor_control[2].CmEst;
 				sweep.omegaStart = 2 * M_PI * 10;
 				sweep.omegaEnd = 2 * M_PI * 100;
 				stats = false;
 			}
 			break;
+
 
 
 		// case'4':
@@ -938,14 +968,42 @@ void logic_loop(void)
 
 		case 'y':
 			snprintf(string, 1500, "%s", clear_string);
-			snprintf(string + strlen(string), 1500-strlen(string), "%s", TMC4671_highLevel_getStatus(2));
-			snprintf(string + strlen(string), 1500-strlen(string), "%s", TMC4671_highLevel_getStatus(3));
-			snprintf(string + strlen(string), 11500-strlen(string), "---------------------------\n");
-			snprintf(string + strlen(string), 1500-strlen(string), "TMC6200 GSTAT:     %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterGSTAT(0), tmc6200_highLevel_getRegisterGSTAT(1), tmc6200_highLevel_getRegisterGSTAT(2), tmc6200_highLevel_getRegisterGSTAT(3));
-			snprintf(string + strlen(string), 1500-strlen(string), "TMC6200 GCONF:     %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterGCONF(0), tmc6200_highLevel_getRegisterGCONF(1), tmc6200_highLevel_getRegisterGCONF(2), tmc6200_highLevel_getRegisterGCONF(3));
-			snprintf(string + strlen(string), 1500-strlen(string), "TMC6200 DRV_CONF:  %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterDRV_CONF(0), tmc6200_highLevel_getRegisterDRV_CONF(1), tmc6200_highLevel_getRegisterDRV_CONF(2), tmc6200_highLevel_getRegisterDRV_CONF(3));
-			snprintf(string + strlen(string), 1500-strlen(string), "as5074u Errors:    %5d\t%5d\t%5d\t%5d\n", as5074uErrorCounter[0], as5074uErrorCounter[1], as5074uErrorCounter[2], as5074uErrorCounter[3]);
-			snprintf(string + strlen(string), 1500-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "%s", TMC4671_highLevel_getStatus(2));
+			snprintf(string+strlen(string), 1500-strlen(string), "%s", TMC4671_highLevel_getStatus(3));
+			snprintf(string+strlen(string), 1500-strlen(string), "TMC6200 GSTAT:     %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterGSTAT(0), tmc6200_highLevel_getRegisterGSTAT(1), tmc6200_highLevel_getRegisterGSTAT(2), tmc6200_highLevel_getRegisterGSTAT(3));
+			snprintf(string+strlen(string), 1500-strlen(string), "TMC6200 GCONF:     %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterGCONF(0), tmc6200_highLevel_getRegisterGCONF(1), tmc6200_highLevel_getRegisterGCONF(2), tmc6200_highLevel_getRegisterGCONF(3));
+			snprintf(string+strlen(string), 1500-strlen(string), "TMC6200 DRV_CONF:  %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterDRV_CONF(0), tmc6200_highLevel_getRegisterDRV_CONF(1), tmc6200_highLevel_getRegisterDRV_CONF(2), tmc6200_highLevel_getRegisterDRV_CONF(3));
+			snprintf(string+strlen(string), 1500-strlen(string), "as5074u Errors:    %5d\t%5d\t%5d\t%5d\n", as5074uErrorCounter[0], as5074uErrorCounter[1], as5074uErrorCounter[2], as5074uErrorCounter[3]);
+			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "pwm_in:      %d  %d  %d  %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
+			snprintf(string+strlen(string), 1500-strlen(string), "angleIn:     % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", angleIn[0], angleIn[1], angleIn[2], angleIn[3]);
+			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "cM2        [u,j]  %3.1f\n", motor_control[2].CmEst);
+			snprintf(string+strlen(string), 1500-strlen(string), "cM3        [i,k]  %3.1f\n", motor_control[3].CmEst);
+			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "f_OBS[2]   [t,g]  %3.1f\n", motor_control[2].fOBS);
+			snprintf(string+strlen(string), 1500-strlen(string), "f_OBS[3]   [z,h]  %3.1f\n", motor_control[3].fOBS);
+			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "f_FB[2]    [e,d]  %3.1f\n", motor_control[2].fFB);
+			snprintf(string+strlen(string), 1500-strlen(string), "f_FB[3]    [r,f]  %3.1f\n", motor_control[3].fFB);
+			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "iq [2]            %3.1f\n", motor_control[2].iq);
+			snprintf(string+strlen(string), 1500-strlen(string), "iq [3]            %3.1f\n", motor_control[3].iq);
+			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "%s\n", limit?"***  LIMIT  ***":" - ");
+			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 1500-strlen(string), "Mode: %s\n",
+				mode==MODE_STOP?"MODE_STOP":
+				mode==MODE_POSITION?"MODE_POSITION":
+				mode==MODE_POSITION_INIT_M3?"MODE_POSITION_INIT_M3":
+				mode==MODE_POSITION_INIT_M2?"MODE_POSITION_INIT_M2":
+				mode==MODE_LIMIT?"MODE_LIMIT":
+				mode==MODE_POSITION_STEP?"MODE_POSITION_STEP":
+				mode==MODE_RCCONTROL?"MODE_RCCONTROL":
+				mode==MODE_SWEEP?"MODE_SWEEP":
+				mode==MODE_IDLE?"MODE_IDLE":
+				" *** UNKNOWN MODE *** ERROR ***");
+
 			snprintf(string + strlen(string), 1500-strlen(string), "finstats\n");
 			HAL_UART_Transmit_IT(&huart3, (uint8_t*) string, strlen(string));
 			break;

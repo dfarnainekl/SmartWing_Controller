@@ -48,16 +48,20 @@ void disturbanceObserver(control_t* ctrl)
 	ctrl->alphaFrict 	= dob->alphaFrict_int;
 	ctrl->ePhi 			= dob->ePhi;
 
-	// ctrl->phiEst = biquad(&(ctrl->bqNotch1), ctrl->phiEst);
-	// ctrl->omegaEst = biquad(&(ctrl->bqNotch2), ctrl->omegaEst);
-
 	//outputs
+
+
 	ctrl->alphaM =    ctrl->kFB0 * ( ctrl->phiDes   - ctrl->phiEst )
 					+ ctrl->kFB1 * ( ctrl->omegaDes - ctrl->omegaEst )
 					+ ctrl->alphaDes
 					- ctrl->alphaFrict;
 
-	// ctrl->alphaM = biquad(&(ctrl->bqNotch), ctrl->alphaM);
+
+
+	ctrl->alphaM = biquad(&(ctrl->bqQ1), ctrl->alphaM);
+	ctrl->alphaM = biquad(&(ctrl->bqQ2), ctrl->alphaM);
+	// ctrl->alphaM = biquad(&(ctrl->bqQ3), ctrl->alphaM);
+
 
 
 	if(ctrl->alphaM > I_LIMIT * ctrl->CmEst)
@@ -170,6 +174,9 @@ void biquadInit(biquad_t* bq, float gain, float b0, float b1, float b2, float a0
 	bq->a0 = a0;
 	bq->a1 = a1;
 	bq->a2 = a2;
+
+	bq->w1 = 0;
+	bq->w2 = 0;
 }
 
 

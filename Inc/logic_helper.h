@@ -5,15 +5,25 @@
 #include <string.h>
 #include <math.h>
 #include "usart.h"
+//#include <stdint.h>
 //#include "logic.h"
 
 #define TA			0.0005
 #define DATA_N		8192
-// #define DATA_N		4096
-// #define DATA_N		1024
-#define MATLAB      1
+#define MATLAB      0
+
 
 #define I_LIMIT     30.0
+#define F_FB        1.0
+#define F_OBS       100
+
+// #define CM_M2       773.0006664650
+// #define CM_M3       493.3781002056
+// #define CM_M2       773.0
+// #define CM_M3       493.0
+
+#define CM_M2       500.0
+#define CM_M3       300.0
 
 
 #define J_M 	(28.44e-6) //Nm
@@ -68,9 +78,10 @@ typedef struct control_s
     biquad_t bqTrajOmega1;
     biquad_t bqPhi;
 
-    biquad_t bqNotch;
-    biquad_t bqNotch1;
-    biquad_t bqNotch2;
+    biquad_t bqQ1;
+    biquad_t bqQ2;
+    biquad_t bqQ3;
+    biquad_t bqQ4;
 
     limiter_t limTrajPhi;
 
