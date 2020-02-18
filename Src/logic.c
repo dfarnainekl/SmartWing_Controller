@@ -141,6 +141,9 @@ void logic_init(void)
 
 	disturbanceObserverInit(&motor_control[2], F_OBS, F_FB, CM_M2);
 	disturbanceObserverInit(&motor_control[3], F_OBS, F_FB, CM_M3);
+	motor_control[2].factorFF = 1;
+	motor_control[3].factorFF = 1;
+
 
 	TMC4671_highLevel_pwmOff(0);
 	TMC4671_highLevel_pwmOff(1);
@@ -169,6 +172,7 @@ void logic_init(void)
 void logic_loop(void)
 {
 	static float angleIn[4] = {0};
+	static float iMax[4] = {0};
 	static char string[1500];
 	static char clear_string[8];
 	static uint32_t i = 0;
@@ -223,6 +227,14 @@ void logic_loop(void)
 			snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(3));
 			snprintf(string+strlen(string), 2000-strlen(string), "pwm_in:      %d  %d  %d  %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
 			snprintf(string+strlen(string), 2000-strlen(string), "angleIn:     % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", angleIn[0], angleIn[1], angleIn[2], angleIn[3]);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "phi_in [°]:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n",	motor_control[0].phiIn*180.0/M_PI, motor_control[1].phiIn*180.0/M_PI, motor_control[2].phiIn*180.0/M_PI, motor_control[3].phiIn*180.0/M_PI);
+			snprintf(string+strlen(string), 2000-strlen(string), "phi    [°]:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n",	motor_control[0].phi*180.0/M_PI, motor_control[1].phi*180.0/M_PI, motor_control[2].phi*180.0/M_PI, motor_control[3].phi*180.0/M_PI);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "factorFF:    % 2.1f  % 2.1f  % 2.1f  % 2.1f\n",	motor_control[0].factorFF, motor_control[1].factorFF, motor_control[2].factorFF, motor_control[3].factorFF);
+			snprintf(string+strlen(string), 2000-strlen(string), "             [-,-]  [-,-]  [v,b]  [n,m]\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "iMax      :  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n",	iMax[0],iMax[1],iMax[2],iMax[3]);
 			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
 			snprintf(string+strlen(string), 2000-strlen(string), "cM2        [u,j]  %3.1f\n", motor_control[2].CmEst);
 			snprintf(string+strlen(string), 2000-strlen(string), "cM3        [i,k]  %3.1f\n", motor_control[3].CmEst);
@@ -287,7 +299,7 @@ void logic_loop(void)
 		for(i=2; i<4; i++) phiAlpha[i] = calcAngleBetaAlpha(i, motor_control[i].phi*180.0/M_PI); // in degree
 
 		//TODO: Umrechnen und richtige begrenzung
-		if(motor_control[3].phi > 60.0/180.0*M_PI || motor_control[3].phi < -60.0/180.0*M_PI )
+		if(motor_control[3].phi > 60.0/180.0*M_PI || motor_control[3].phi < -100.0/180.0*M_PI )
 		{
 			mode = MODE_LIMIT;
 			limit = true;
@@ -352,6 +364,7 @@ void logic_loop(void)
 				biquadReset(&motor_control[i].bqQ2,    0);
 				biquadReset(&motor_control[i].bqQ3,    0);
 				biquadReset(&motor_control[i].bqQ4,    0);
+				biquadReset(&motor_control[i].bqFB,    0);
 
 				disturbanceObserverResetPhi0(&motor_control[i], motor_control[i].phi0);
 			}
@@ -412,7 +425,7 @@ void logic_loop(void)
 				biquadReset(&motor_control[i].bqQ2,    0);
 				biquadReset(&motor_control[i].bqQ3,    0);
 				biquadReset(&motor_control[i].bqQ4,    0);
-
+				biquadReset(&motor_control[i].bqFB,    0);
 
 				disturbanceObserverResetPhi0(&motor_control[i], motor_control[i].phi0);
 			}
@@ -475,11 +488,15 @@ void logic_loop(void)
 			{
 				motor_control[i].phi0 = TMC4671_highLevel_getPositionActualRad(i);
 				//switch from 2Hz prefilter to ...
-				/*70Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0098135132, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6037472896, 0.6430013423);
-				/*50Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0053028263, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.7087179717, 0.7299292767);
+				// /*70Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0098135132, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6037472896, 0.6430013423);
+				// /*50Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0053028263, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.7087179717, 0.7299292767);
 				/*30Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0020252849, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8199873376, 0.8280884773);
-				/*20Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0009277524, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8781638882, 0.8818748977);
-				/*10Hz*/ // for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0002391674, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.9381398440, 0.9390965137);
+				// /*20Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0009277524, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8781638882, 0.8818748977);
+				// /*10Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajPhi,    0.0002391674, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.9381398440, 0.9390965137);
+
+				//inner faster
+				// biquadInit(&motor_control[3].bqTrajPhi,    0.0053028263, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.7087179717, 0.7299292767);
+				// biquadInit(&motor_control[2].bqTrajPhi,    0.0020252849, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8199873376, 0.8280884773);
 
 				biquadReset(&motor_control[i].bqTrajPhi,    motor_control[i].phi0);
 				sweep.k++;
@@ -516,8 +533,26 @@ void logic_loop(void)
 		}
 		else if(mode == MODE_SWEEP)
 		{
+			// if(sweep.rate_counter >= sweep.rate-1)
+			// {
+			// 	sweep.t = sweep.k * sweep.Ta;
+			// 	sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
+			// 	sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
+			// }
 
-			for(i=2; i<4; i++) motor_control[i].phiIn = 0;
+			sweep.N = DATA_N*sweep.rate;
+
+
+			sweep.t = sweep.k * sweep.Ta;
+			sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
+			sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
+
+
+			angleIn[2] = 0.0;
+			angleIn[3] = 5*sweep.out;
+			for(i=0; i<4; i++) motor_control[i].phiIn = calcAngleTarget(i, angleIn)*M_PI/180;
+
+			//for(i=0; i<4; i++) motor_control[i].phiIn = 0;
 
 			//Input filtering
 			for(i=2; i<4; i++) motor_control[i].phi = biquad(&motor_control[i].bqPhi, motor_control[i].phi);
@@ -536,25 +571,25 @@ void logic_loop(void)
 			//Disturbance Observer
 			for(i=2; i<4; i++) disturbanceObserver(&motor_control[i]);
 
-			if(sweep.rate_counter >= sweep.rate-1)
-			{
-				sweep.t = sweep.k * sweep.Ta;
-				sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
-				sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
-
-			}
 
 
 
-			if(sweep.mode == M2)
-				motor_control[2].alphaM += sweep.out;
-			else if(sweep.mode == M3)
-				motor_control[3].alphaM += sweep.out;
 
-			float alphaMold = motor_control[3].alphaM;
+			// if(sweep.mode == M2)
+			// 	motor_control[2].alphaM += sweep.out * motor_control[2].CmEst;
+			// else if(sweep.mode == M3)
+			// 	motor_control[3].alphaM += sweep.out * motor_control[3].CmEst;
+			// else if(sweep.mode == M2M3)
+			// {
+			// 	motor_control[2].alphaM += sweep.out * motor_control[2].CmEst;
+			// 	motor_control[3].alphaM += sweep.out *motor_control[3].CmEst;
+			// }
 
-			i = 3;
-			motor_control[i].alphaM  = biquad(&motor_control[i].bqQ1, motor_control[i].alphaM);
+			// float alphaMold2 = motor_control[2].alphaM;
+			// float alphaMold3 = motor_control[3].alphaM;
+
+			//i = 3;
+			//motor_control[i].alphaM  = biquad(&motor_control[i].bqQ1, motor_control[i].alphaM);
 
 			for(i=2; i<4; i++)	motor_control[i].iq = motor_control[i].alphaM / motor_control[i].CmEst;
 
@@ -569,28 +604,39 @@ void logic_loop(void)
 			for(i=2; i<4; i++) TMC4671_highLevel_setTorqueTargetA(i, motor_control[i].iq);
 
 
-			if(sweep.rate_counter >= sweep.rate-1)
-			{
+			// if(sweep.rate_counter >= sweep.rate-1)
+			// {
+				uint16_t index = (uint16_t)(sweep.k/sweep.rate);
 
-				for (i = 2; i < 4; i++) data1[sweep.k].phiIn[i-2]  	 		= motor_control[i].phiIn;
-				for (i = 2; i < 4; i++) data2[sweep.k].phiInLimited[i-2] 	= motor_control[i].phiInLimited;
-				for (i = 2; i < 4; i++) data2[sweep.k].phiDes[i-2]   		= motor_control[i].phiDes;
-				for (i = 2; i < 4; i++) data2[sweep.k].omegaDes[i-2] 		= motor_control[i].omegaDes;
-				for (i = 2; i < 4; i++) data2[sweep.k].alphaDes[i-2] 		= motor_control[i].alphaDes;
-				for (i = 2; i < 4; i++) data1[sweep.k].phi[i-2]  	 		= motor_control[i].phi;
-				for (i = 2; i < 4; i++) data1[sweep.k].alphaM[i-2] 			= motor_control[i].alphaM;
-				for (i = 2; i < 4; i++) data1[sweep.k].iq[i-2]       		= motor_control[i].iq;
-				for (i = 2; i < 4; i++) data1[sweep.k].phiEst[i-2]			= motor_control[i].phiEst;
-				for (i = 2; i < 4; i++) data1[sweep.k].omegaEst[i-2]  	 	= motor_control[i].omegaEst;
-				for (i = 2; i < 4; i++) data1[sweep.k].alphaEst[i-2]       	= motor_control[i].alphaEst;
-				for (i = 2; i < 4; i++) data1[sweep.k].alphaFrict[i-2]		= motor_control[i].alphaFrict;
+				if(sweep.k % sweep.rate == 0)
+				{
+					for (i = 2; i < 4; i++) data1[index].phiIn[i-2]  	 	= motor_control[i].phiIn;
+					for (i = 2; i < 4; i++) data2[index].phiInLimited[i-2] 	= motor_control[i].phiInLimited;
+					for (i = 2; i < 4; i++) data2[index].phiDes[i-2]   		= motor_control[i].phiDes;
+					for (i = 2; i < 4; i++) data2[index].omegaDes[i-2] 		= motor_control[i].omegaDes;
+					for (i = 2; i < 4; i++) data2[index].alphaDes[i-2] 		= motor_control[i].alphaDes;
+					for (i = 2; i < 4; i++) data1[index].phi[i-2]  	 		= motor_control[i].phi;
+					for (i = 2; i < 4; i++) data1[index].alphaM[i-2] 		= motor_control[i].alphaM;
+					for (i = 2; i < 4; i++) data1[index].iq[i-2]       		= motor_control[i].iq;
+					for (i = 2; i < 4; i++) data1[index].phiEst[i-2]		= motor_control[i].phiEst;
+					for (i = 2; i < 4; i++) data1[index].omegaEst[i-2]  	 = motor_control[i].omegaEst;
+					for (i = 2; i < 4; i++) data1[index].alphaEst[i-2]       = motor_control[i].alphaEst;
+					for (i = 2; i < 4; i++) data1[index].alphaFrict[i-2]	= motor_control[i].alphaFrict;
+				}
+				 // data1[sweep.k].alphaM[0] = alphaMold2;
+				 // data1[sweep.k].alphaM[1] = alphaMold3;
 
-				 data1[sweep.k].alphaM[1] = alphaMold;
+				 if(!mode_matlab && index > DATA_N-20)
+				 {
+					 snprintf(string, 200, 	"\nk = %ld\tindex = %d\tmod = %ld", sweep.k, index, sweep.k % sweep.rate);
+					 HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, strlen(string));
+				 }
 
-				if(sweep.k >= (DATA_N-1)) // stop
+
+				if(sweep.k >= (DATA_N-1)*sweep.rate ) // stop
 				{
 				    mode = MODE_POSITION;
-				    stats = true;
+				    stats = false;
 
 				    if(mode_matlab)
 					{
@@ -599,31 +645,50 @@ void logic_loop(void)
 					}
 				}
 				sweep.k++;
-				sweep.rate_counter = 0;
-			}
-			else
-			{
-				sweep.rate_counter++;
-			}
+				// sweep.rate_counter = 0;
+			// }
+			// else
+			// {
+			// 	sweep.rate_counter++;
+			// }
 		}
 		else if(mode == MODE_POSITION_STEP)
 		{
 
-
-				// motor_control[3].phiIn = 0;
-				//
-				// if(sweep.k < 20)
-				// 	motor_control[2].phiIn = 0;
-				// else if(sweep.k == 20)
-				// 	motor_control[2].phiIn = 7*M_PI/180;
-				// else if(sweep.k > 2000)
-				// motor_control[2].phiIn = 0;
+			// angleIn[2] =   ( (float)(pwm_in[0] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
+			// angleIn[3] =   ( (float)(pwm_in[1] - 1500)/ 500.0 * ANGLE_MAX_ALPHA_DEGREE ); // in degree
 
 
-			for(i=2; i<4; i++) motor_control[i].phiIn = 0;
+
+			if(sweep.k < 500)
+			{
+				angleIn[2] = 0.0;
+				angleIn[3] = 0.0;
+
+			}
+			else if(sweep.k == 1000)
+			{
+				angleIn[2] = 0.0;
+				angleIn[3] = 5.0;
+			}
+			else if(sweep.k > 5000)
+			{
+				angleIn[2] = 0.0;
+				angleIn[3] = 0.0;
+			}
+
+			// WITH wing
+			for(i=0; i<4; i++) motor_control[i].phiIn = calcAngleTarget(i, angleIn)*M_PI/180; //calcAngleTarget takes and outputs angles in degrees
+
+			// WITHOUT wing
+			// motor_control[0].phiIn = 0;
+			// motor_control[1].phiIn = 0;
+			// motor_control[2].phiIn = angleIn[2]/180.0*M_PI;
+			// motor_control[3].phiIn = angleIn[3]/180.0*M_PI;
+
 
 			//Input filtering
-			for(i=2; i<4; i++) motor_control[i].phi = biquad(&motor_control[i].bqPhi, motor_control[i].phi);
+			//for(i=2; i<4; i++) motor_control[i].phi = biquad(&motor_control[i].bqPhi, motor_control[i].phi);
 
 			//Trajectory
 			for(i=2; i<4; i++)motor_control[i].phiInLimited = rateLimiter(&motor_control[i].limTrajPhi, motor_control[i].phiIn);
@@ -646,6 +711,12 @@ void logic_loop(void)
 				else if ( motor_control[i].iq < -I_LIMIT )
 					 motor_control[i].iq = -I_LIMIT;
 			 }
+
+			for (i = 0; i < 4; i++)
+			{
+				if( fabsf(motor_control[i].iq) >= fabsf(iMax[i]))
+					iMax[i] = fabsf(motor_control[i].iq);
+			}
 
 			for(i=2; i<4; i++) TMC4671_highLevel_setTorqueTargetA(i, motor_control[i].iq);
 
@@ -751,21 +822,35 @@ void logic_loop(void)
 			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqTrajOmega1, 0.6110154704, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, 0.2220309407, 0.0000000000);
 			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqPhi,        0.4399008465, 1.0000000000, 1.0000000000, 0.0000000000, 1.0000000000, -0.1201983070, 0.0000000000);
 
-			// /*50Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0055211947, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.7790823542, 0.8011671330);
-			// /*70Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0103548791, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6922185804, 0.7336380968);
-			// /*100Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0197895827, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.5645039861, 0.6436623168);
+
+
+			// Biquads Q1
+			// /*40Hz*/  for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0036125749, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8229266924, 0.8373769921);
+			// /*50Hz*/  for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0055211947, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.7790823542, 0.8011671330);
+			// /*70Hz*/  for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0103548791, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.6922185804, 0.7336380968);
+			//  /*100Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.0197895827, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.5645039861, 0.6436623168);
 			// /*500Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.2261536997, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -0.2809457379, 0.1855605367);
 			/*300Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ1,    0.1175887057, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -0.8238649748, 0.2942197977);
 
+			// Biquads Q2
 
-			// biquadInit(&motor_control[3].bqQ2,    0.9750000000, 1.0000000000, -1.9186667840, 0.9980010000, 1.0000000000, -1.8725726871, 0.9500000000);
-			// biquadInit(&motor_control[3].bqQ3,    0.9950000000, 1.0000000000, -1.9427951010, 0.9980010000, 1.0000000000, -1.9350161416, 0.9900000000);
+			// for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ2,    0.9600000000, 1.0000000000, -1.9363726866, 0.9960040000, 1.0000000000, -1.8626430653, 0.9200000000);
+			/*OFF*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ2,    1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
 
-			for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqQ2,    0.9600000000, 1.0000000000, -1.9363726866, 0.9960040000, 1.0000000000, -1.8626430653, 0.9200000000);
+			// Biquad: FB Low pass
+			// /*50Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqFB,    0.0055211947, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.7790823542, 0.8011671330);
+			// /*30Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqFB,    0.0020775900, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.8669904265, 0.8753007866);
+			// /*20Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqFB,    0.0009440841, 1.0000000000, 2.0000000000, 1.0000000000, 1.0000000000, -1.9112262303, 0.9150025668);
+			// /*OFF*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqFB,    1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
+
+			// Biquad: FB PID
+			/*10Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqFB,    11213.4543735852, 1.0000000000, -1.9860979933, 0.9861342936, 1.0000000000, -1.8790635908, 0.8818474937);
+			// /*20Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqFB,    43220.9251325870, 1.0000000000, -1.9723160682, 0.9724602659, 1.0000000000, -1.7968095229, 0.8021375505);
+			// /*30Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqFB,    93878.1322364992, 1.0000000000, -1.9586524920, 0.9589747039, 1.0000000000, -1.7213475136, 0.7290095870);
+			// /*40Hz*/ for (i = 0; i < 4; i++) biquadInit(&motor_control[i].bqFB,    161383.0305537698, 1.0000000000, -1.9451055667, 0.9456744624, 1.0000000000, -1.6518696468, 0.6616806761);
 
 
-			// biquadInit(&motor_control[2].bqQ2,    1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
-			biquadInit(&motor_control[2].bqQ3,    1.0000000000, 1.0000000000, 0.0000000000, 0.0000000000, 1.0000000000, 0.0000000000, 0.0000000000);
+
 
 
 
@@ -794,6 +879,7 @@ void logic_loop(void)
 				mode = MODE_POSITION_STEP;
 				sweep.k = 0;
 				sweep.Ta = TA;
+				for (i = 0; i < 4; i++) iMax[i] = 0;
 			}
 			break;
 
@@ -813,15 +899,15 @@ void logic_loop(void)
 			{
 				mode = MODE_SWEEP;
 
-				sweep.rate = 3;
-				sweep.rate_counter = 3;
-				sweep.Ta = sweep.rate*TA;
+				sweep.rate = 5;
+				sweep.rate_counter = 5;
+				sweep.Ta = TA;
 
 				sweep.k = 0;
 				sweep.mode = M3;
-				sweep.U =0.5*motor_control[2].CmEst;
-				sweep.omegaStart = 2 * M_PI * 20;
-				sweep.omegaEnd = 2 * M_PI * 3;
+				sweep.U =1;
+				sweep.omegaStart = 2 * M_PI * 0.5;
+				sweep.omegaEnd = 2 * M_PI * 10;
 				stats = false;
 			}
 			break;
@@ -833,11 +919,11 @@ void logic_loop(void)
 
 				sweep.rate = 1;
 				sweep.rate_counter = 1;
-				sweep.Ta = sweep.rate*TA;
+				sweep.Ta = TA;
 
 				sweep.k = 0;
 				sweep.mode = M3;
-				sweep.U = 2*motor_control[2].CmEst;
+				sweep.U = 10;
 				sweep.omegaStart = 2 * M_PI * 5;
 				sweep.omegaEnd = 2 * M_PI * 30;
 				stats = false;
@@ -851,11 +937,11 @@ void logic_loop(void)
 
 				sweep.rate = 1;
 				sweep.rate_counter = 1;
-				sweep.Ta = sweep.rate*TA;
+				sweep.Ta = TA;
 
 				sweep.k = 0;
 				sweep.mode = M3;
-				sweep.U = 4*motor_control[2].CmEst;
+				sweep.U = 20;
 				sweep.omegaStart = 2 * M_PI * 10;
 				sweep.omegaEnd = 2 * M_PI * 100;
 				stats = false;
@@ -863,13 +949,6 @@ void logic_loop(void)
 			break;
 
 
-
-		// case'4':
-		// 	disturbanceObserverInit(&motor_control[2], 2*M_PI*100, 2*M_PI*10, 773.0006664650);
-		// 	disturbanceObserverInit(&motor_control[3], 2*M_PI*100, 2*M_PI*10, 493.3781002056);
-		// 	mode = MODE_STOP;
-		// 	stats = false;
-		// 	break;
 
 		case 'u':
 			motor_control[2].CmEst += 10;
@@ -928,6 +1007,24 @@ void logic_loop(void)
 				disturbanceObserverInit(&motor_control[3], motor_control[3].fOBS-1.0, motor_control[3].fFB, motor_control[3].CmEst);
 			break;
 
+		// case 'v':
+		// 	motor_control[2].factorFF +=0.1;
+		// 	break;
+		//
+		// case 'b':
+		// 	if(motor_control[2].factorFF > 0.1)
+		// 		motor_control[2].factorFF -= 0.1;
+		// 	break;
+		//
+		// case 'n':
+		// 	motor_control[3].factorFF +=0.1;
+		// 	break;
+		//
+		// case 'm':
+		// 	if(motor_control[3].factorFF > 0.1)
+		// 		motor_control[3].factorFF -= 0.1;
+		// 	break;
+
 
 		case 'x': // print data
 			for (i = 0; i < DATA_N; i++)
@@ -967,32 +1064,35 @@ void logic_loop(void)
 
 
 		case 'y':
-			snprintf(string, 1500, "%s", clear_string);
-			snprintf(string+strlen(string), 1500-strlen(string), "%s", TMC4671_highLevel_getStatus(2));
-			snprintf(string+strlen(string), 1500-strlen(string), "%s", TMC4671_highLevel_getStatus(3));
-			snprintf(string+strlen(string), 1500-strlen(string), "TMC6200 GSTAT:     %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterGSTAT(0), tmc6200_highLevel_getRegisterGSTAT(1), tmc6200_highLevel_getRegisterGSTAT(2), tmc6200_highLevel_getRegisterGSTAT(3));
-			snprintf(string+strlen(string), 1500-strlen(string), "TMC6200 GCONF:     %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterGCONF(0), tmc6200_highLevel_getRegisterGCONF(1), tmc6200_highLevel_getRegisterGCONF(2), tmc6200_highLevel_getRegisterGCONF(3));
-			snprintf(string+strlen(string), 1500-strlen(string), "TMC6200 DRV_CONF:  %5d\t%5d\t%5d\t%5d\n", tmc6200_highLevel_getRegisterDRV_CONF(0), tmc6200_highLevel_getRegisterDRV_CONF(1), tmc6200_highLevel_getRegisterDRV_CONF(2), tmc6200_highLevel_getRegisterDRV_CONF(3));
-			snprintf(string+strlen(string), 1500-strlen(string), "as5074u Errors:    %5d\t%5d\t%5d\t%5d\n", as5074uErrorCounter[0], as5074uErrorCounter[1], as5074uErrorCounter[2], as5074uErrorCounter[3]);
-			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "pwm_in:      %d  %d  %d  %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
-			snprintf(string+strlen(string), 1500-strlen(string), "angleIn:     % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", angleIn[0], angleIn[1], angleIn[2], angleIn[3]);
-			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "cM2        [u,j]  %3.1f\n", motor_control[2].CmEst);
-			snprintf(string+strlen(string), 1500-strlen(string), "cM3        [i,k]  %3.1f\n", motor_control[3].CmEst);
-			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "f_OBS[2]   [t,g]  %3.1f\n", motor_control[2].fOBS);
-			snprintf(string+strlen(string), 1500-strlen(string), "f_OBS[3]   [z,h]  %3.1f\n", motor_control[3].fOBS);
-			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "f_FB[2]    [e,d]  %3.1f\n", motor_control[2].fFB);
-			snprintf(string+strlen(string), 1500-strlen(string), "f_FB[3]    [r,f]  %3.1f\n", motor_control[3].fFB);
-			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "iq [2]            %3.1f\n", motor_control[2].iq);
-			snprintf(string+strlen(string), 1500-strlen(string), "iq [3]            %3.1f\n", motor_control[3].iq);
-			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "%s\n", limit?"***  LIMIT  ***":" - ");
-			snprintf(string+strlen(string), 1500-strlen(string), "---------------------------\n");
-			snprintf(string+strlen(string), 1500-strlen(string), "Mode: %s\n",
+			snprintf(string, 2000, "%s", clear_string);
+			snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(2));
+			snprintf(string+strlen(string), 2000, "%s", TMC4671_highLevel_getStatus(3));
+			snprintf(string+strlen(string), 2000-strlen(string), "pwm_in:      %d  %d  %d  %d\n",	pwm_in[0], pwm_in[1], pwm_in[2], pwm_in[3]);
+			snprintf(string+strlen(string), 2000-strlen(string), "angleIn:     % 2.1f  % 2.1f  % 2.1f  % 2.1f\n", angleIn[0], angleIn[1], angleIn[2], angleIn[3]);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "phi_in [°]:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n",	motor_control[0].phiIn*180.0/M_PI, motor_control[1].phiIn*180.0/M_PI, motor_control[2].phiIn*180.0/M_PI, motor_control[3].phiIn*180.0/M_PI);
+			snprintf(string+strlen(string), 2000-strlen(string), "phi    [°]:  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n",	motor_control[0].phi*180.0/M_PI, motor_control[1].phi*180.0/M_PI, motor_control[2].phi*180.0/M_PI, motor_control[3].phi*180.0/M_PI);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "factorFF:    % 2.1f  % 2.1f  % 2.1f  % 2.1f\n",	motor_control[0].factorFF, motor_control[1].factorFF, motor_control[2].factorFF, motor_control[3].factorFF);
+			snprintf(string+strlen(string), 2000-strlen(string), "             [-,-]  [-,-]  [v,b]  [n,m]\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "iMax      :  % 2.1f  % 2.1f  % 2.1f  % 2.1f\n",	iMax[0],iMax[1],iMax[2],iMax[3]);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "cM2        [u,j]  %3.1f\n", motor_control[2].CmEst);
+			snprintf(string+strlen(string), 2000-strlen(string), "cM3        [i,k]  %3.1f\n", motor_control[3].CmEst);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "f_OBS[2]   [t,g]  %3.1f\n", motor_control[2].fOBS);
+			snprintf(string+strlen(string), 2000-strlen(string), "f_OBS[3]   [z,h]  %3.1f\n", motor_control[3].fOBS);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "f_FB[2]    [e,d]  %3.1f\n", motor_control[2].fFB);
+			snprintf(string+strlen(string), 2000-strlen(string), "f_FB[3]    [r,f]  %3.1f\n", motor_control[3].fFB);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "iq [2]            %3.1f\n", motor_control[2].iq);
+			snprintf(string+strlen(string), 2000-strlen(string), "iq [3]            %3.1f\n", motor_control[3].iq);
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "%s\n", limit?"***  LIMIT  ***":" - ");
+			snprintf(string+strlen(string), 2000-strlen(string), "---------------------------\n");
+			snprintf(string+strlen(string), 2000-strlen(string), "Mode: %s\n",
 				mode==MODE_STOP?"MODE_STOP":
 				mode==MODE_POSITION?"MODE_POSITION":
 				mode==MODE_POSITION_INIT_M3?"MODE_POSITION_INIT_M3":
@@ -1003,8 +1103,7 @@ void logic_loop(void)
 				mode==MODE_SWEEP?"MODE_SWEEP":
 				mode==MODE_IDLE?"MODE_IDLE":
 				" *** UNKNOWN MODE *** ERROR ***");
-
-			snprintf(string + strlen(string), 1500-strlen(string), "finstats\n");
+			snprintf(string + strlen(string), 2000-strlen(string), "finstats\n");
 			HAL_UART_Transmit_IT(&huart3, (uint8_t*) string, strlen(string));
 			break;
 

@@ -19,11 +19,12 @@
 
 // #define CM_M2       773.0006664650
 // #define CM_M3       493.3781002056
-// #define CM_M2       773.0
-// #define CM_M3       493.0
 
-#define CM_M2       500.0
-#define CM_M3       300.0
+#define CM_M2       773.0
+#define CM_M3       493.0
+
+// #define CM_M2       500.0
+// #define CM_M3       300.0
 
 
 #define J_M 	(28.44e-6) //Nm
@@ -82,6 +83,7 @@ typedef struct control_s
     biquad_t bqQ2;
     biquad_t bqQ3;
     biquad_t bqQ4;
+    biquad_t bqFB;
 
     limiter_t limTrajPhi;
 
@@ -93,6 +95,11 @@ typedef struct control_s
     float phi;
     float alphaM;
     dob_t dob;
+
+    float alphaM_1;
+    float alphaM_2;
+    float alphaFB;
+    float factorFF;
 
     float phiEst;
     float omegaEst;
@@ -131,7 +138,8 @@ void  biquadInit(biquad_t* bq, float gain, float b0, float b1, float b2, float a
 float rateLimiter(limiter_t* limiter, float in);
 void  rateLimiterInit(limiter_t* limiter, float r, float out_);
 
-void disturbanceObserverInit(control_t* ctrl, float omegaOBS, float omegaFB, float CmEst);
+// void disturbanceObserverInit(control_t* ctrl, float omegaOBS, float omegaFB, float CmEst);
+void disturbanceObserverInit(control_t* ctrl, float fOBS, float fFB, float CmEst);
 void disturbanceObserver(control_t* ctrl);
 void disturbanceObserverResetCm(control_t* ctrl, float CmEst);
 void disturbanceObserverResetPhi0(control_t* ctrl, float phi0);

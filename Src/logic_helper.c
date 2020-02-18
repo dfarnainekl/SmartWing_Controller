@@ -33,11 +33,15 @@ void disturbanceObserver(control_t* ctrl)
 {
 	dob_t* dob = &ctrl->dob;
 
+	ctrl->alphaM_2 = ctrl->alphaM_1;
+	ctrl->alphaM_1 = ctrl->alphaM;
+
+
 	dob->ePhi 			= ctrl->phi - dob->phiEst_int;
 	dob->ePhi_int 		= dob->ePhi_int 		+ TA *  dob->ePhi;
 	dob->alphaFrict_int = dob->alphaFrict_int 	+ TA * (dob->ke3*dob->ePhi + dob->keI*dob->ePhi_int);
 
-	dob->alphaEst 		= dob->ke2*dob->ePhi + dob->alphaFrict_int + ctrl->alphaM;
+	dob->alphaEst 		= dob->ke2*dob->ePhi + dob->alphaFrict_int + ctrl->alphaM_2;
 	dob->omegaEst_int 	= dob->omegaEst_int 	+ TA *  dob->alphaEst;
 	dob->phiEst_int 	= dob->phiEst_int 		+ TA * (dob->ke1*dob->ePhi + dob->omegaEst_int);
 
@@ -49,26 +53,31 @@ void disturbanceObserver(control_t* ctrl)
 	ctrl->ePhi 			= dob->ePhi;
 
 	//outputs
+	//ctrl->alphaFB =   ctrl->kFB0 * ( ctrl->phiDes   - ctrl->phiEst )
+	//				+ ctrl->kFB1 * ( ctrl->omegaDes - ctrl->omegaEst );
+
+	ctrl->alphaFB = biquad(&(ctrl->bqFB),  ( ctrl->phiDes - ctrl->phiEst ) );
 
 
-	ctrl->alphaM =    ctrl->kFB0 * ( ctrl->phiDes   - ctrl->phiEst )
-					+ ctrl->kFB1 * ( ctrl->omegaDes - ctrl->omegaEst )
+	// ctrl->alphaFB = biquad(&(ctrl->bqFB), ctrl->alphaFB);
+
+	ctrl->alphaM =    ctrl->alphaFB
 					+ ctrl->alphaDes
 					- ctrl->alphaFrict;
 
 
-
-	ctrl->alphaM = biquad(&(ctrl->bqQ1), ctrl->alphaM);
-	ctrl->alphaM = biquad(&(ctrl->bqQ2), ctrl->alphaM);
+	// ctrl->alphaM = biquad(&(ctrl->bqQ1), ctrl->alphaM);
+	// ctrl->alphaM = biquad(&(ctrl->bqQ2), ctrl->alphaM);
 	// ctrl->alphaM = biquad(&(ctrl->bqQ3), ctrl->alphaM);
 
-
+	// ctrl->alphaM += ctrl->factorFF * ctrl->alphaDes;
 
 	if(ctrl->alphaM > I_LIMIT * ctrl->CmEst)
 		ctrl->alphaM = I_LIMIT * ctrl->CmEst;
 	else if(ctrl->alphaM < -I_LIMIT * ctrl->CmEst)
 		ctrl->alphaM = -I_LIMIT * ctrl->CmEst;
 
+	// ctrl->iq = (ctrl->alphaM + (ctrl->factorFF -1)* ctrl->alphaDes) / ctrl->CmEst;
 	ctrl->iq = ctrl->alphaM / ctrl->CmEst;
 }
 
@@ -125,6 +134,8 @@ void disturbanceObserverInit(control_t* ctrl, float fOBS, float fFB, float CmEst
 
 	ctrl->CmEst = CmEst;
 
+	// ctrl->factorFF = factorFFIn;
+
 	// static char string[256];
 	// uint16_t len = snprintf(string, 256, "\n\n\np1[0] = %f\np1[1] = %f\np1[2] = %f\np1[3] = %f\np1[4] = %f\n\np2[0] = %f\np2[1] = %f\np2[2] = %f\n\n\n\n", p1[0], p1[1], p1[2], p1[3], p1[4], p2[0], p2[1], p2[2]);
 	// HAL_UART_Transmit_IT(&huart3, (uint8_t*)string, len);
@@ -141,6 +152,10 @@ void disturbanceObserverResetPhi0(control_t* ctrl, float phi0)
 {
 	dob_t* dob = &ctrl->dob;
 	dob->phiEst_int= phi0;
+
+	dob->ePhi_int = 0;
+    dob->omegaEst_int = 0;
+    dob->alphaFrict_int = 0;
 }
 
 
@@ -268,6 +283,11 @@ float calcTorqueAlphaBeta(uint8_t drv, float angleAlpha, float torqueAlpha)
 
 float calcAngleTarget(uint8_t drv, float* angleIn)
 {
+	/*
+		angleIn in degrees
+		angleOut in degrees
+	*/
+
 	float angleOut = 0;
 
 	if(drv == 0)
