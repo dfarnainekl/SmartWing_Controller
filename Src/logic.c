@@ -91,11 +91,13 @@ void logic_init(void)
 	rx_byte_new = 0;
 
 
-	while ( (!(rx_byte_new && rx_byte == 's') && button_init == true ) || !(TMC4671_highLevel_getPhiM(2)==0 && TMC4671_highLevel_getPhiM(3)==0 && TMC4671_highLevel_getPhiE(2)==0 && TMC4671_highLevel_getPhiE(3)==0 ) )
+	// while ( (!(rx_byte_new && rx_byte == 's') && button_init == true ) || !(TMC4671_highLevel_getPhiM(2)==0 && TMC4671_highLevel_getPhiM(3)==0 && TMC4671_highLevel_getPhiE(2)==0 && TMC4671_highLevel_getPhiE(3)==0 ) )
+	while ( (!(rx_byte_new && rx_byte == 's') && button_init == true ) || !(TMC4671_highLevel_getPhiM(2)==0  && TMC4671_highLevel_getPhiE(2)==0 ) )
 	{
 		button_init = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
 
-		if(!(TMC4671_highLevel_getPhiM(2)==0 && TMC4671_highLevel_getPhiM(3)==0 && TMC4671_highLevel_getPhiE(2)==0 && TMC4671_highLevel_getPhiE(3)==0 ))
+		// if(!(TMC4671_highLevel_getPhiM(2)==0 && TMC4671_highLevel_getPhiM(3)==0 && TMC4671_highLevel_getPhiE(2)==0 && TMC4671_highLevel_getPhiE(3)==0 ))
+		if(!(TMC4671_highLevel_getPhiM(2)==0 && TMC4671_highLevel_getPhiE(2)==0 ))
 		{
 			if(led)
 			{
@@ -149,6 +151,13 @@ void logic_init(void)
 	TMC4671_highLevel_pwmOff(1);
 	// TMC4671_highLevel_pwmOff(2);
 	// TMC4671_highLevel_pwmOff(3);
+
+
+	///////////////////////////////////////////////////
+	for (i = 0; i < 4; i++) TMC4671_highLevel_stoppedMode(i);
+	TMC4671_highLevel_pwmOff(3);
+	///////////////////////////////////////////////////
+
 
 	//for(i=2; i<4; i++) tmc4671_writeInt(i, TMC4671_PID_POSITION_ACTUAL, 0);
 
@@ -290,30 +299,30 @@ void logic_loop(void)
 		{
 			float phi = TMC4671_highLevel_getPositionActualRad(i);
 
-			if(phi < M_PI && phi > -M_PI)
+			// if(phi < M_PI && phi > -M_PI)
 				motor_control[i].phi = phi;
 		}
 
 
-		float phiAlpha[4];
-		for(i=2; i<4; i++) phiAlpha[i] = calcAngleBetaAlpha(i, motor_control[i].phi*180.0/M_PI); // in degree
-
-		//TODO: Umrechnen und richtige begrenzung
-		if(motor_control[3].phi > 60.0/180.0*M_PI || motor_control[3].phi < -100.0/180.0*M_PI )
-		{
-			mode = MODE_LIMIT;
-			limit = true;
-
-		}
-		else if(phiAlpha[2]-phiAlpha[3] > 25.0 || phiAlpha[2]-phiAlpha[3] < -25.0)
-		{
-			mode = MODE_LIMIT;
-			limit = true;
-		}
-		else
-		{
-				limit = false;
-		}
+		// float phiAlpha[4];
+		// for(i=2; i<4; i++) phiAlpha[i] = calcAngleBetaAlpha(i, motor_control[i].phi*180.0/M_PI); // in degree
+		//
+		// //TODO: Umrechnen und richtige begrenzung
+		// if(motor_control[3].phi > 60.0/180.0*M_PI || motor_control[3].phi < -100.0/180.0*M_PI )
+		// {
+		// 	mode = MODE_LIMIT;
+		// 	limit = true;
+		//
+		// }
+		// else if(phiAlpha[2]-phiAlpha[3] > 25.0 || phiAlpha[2]-phiAlpha[3] < -25.0)
+		// {
+		// 	mode = MODE_LIMIT;
+		// 	limit = true;
+		// }
+		// else
+		// {
+		// 		limit = false;
+		// }
 
 
 
@@ -533,24 +542,21 @@ void logic_loop(void)
 		}
 		else if(mode == MODE_SWEEP)
 		{
-			// if(sweep.rate_counter >= sweep.rate-1)
-			// {
-			// 	sweep.t = sweep.k * sweep.Ta;
-			// 	sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
-			// 	sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
-			// }
-
 			sweep.N = DATA_N*sweep.rate;
-
 
 			sweep.t = sweep.k * sweep.Ta;
 			sweep.r = sat(10*(float)sweep.k/sweep.N)*sat(10*(float)(sweep.N-sweep.k)/sweep.N);
 			sweep.out = sweep.U*sweep.r*sin(sweep.omegaStart*sweep.t	+ (sweep.omegaEnd-sweep.omegaStart)/(sweep.N*sweep.Ta*2)*(sweep.t*sweep.t) );
 
+			angleIn[0] = 0;
+			angleIn[1] = 0;
+			angleIn[2] = 7*sweep.out;
+			angleIn[3] = 0*sweep.out;
 
-			angleIn[2] = 0.0;
-			angleIn[3] = 5*sweep.out;
 			for(i=0; i<4; i++) motor_control[i].phiIn = calcAngleTarget(i, angleIn)*M_PI/180;
+
+			// motor_control[2].phiIn = 2*3*sweep.out*M_PI/180;
+			// motor_control[3].phiIn = 5*3*sweep.out*M_PI/180;
 
 			//for(i=0; i<4; i++) motor_control[i].phiIn = 0;
 
@@ -585,12 +591,6 @@ void logic_loop(void)
 			// 	motor_control[3].alphaM += sweep.out *motor_control[3].CmEst;
 			// }
 
-			// float alphaMold2 = motor_control[2].alphaM;
-			// float alphaMold3 = motor_control[3].alphaM;
-
-			//i = 3;
-			//motor_control[i].alphaM  = biquad(&motor_control[i].bqQ1, motor_control[i].alphaM);
-
 			for(i=2; i<4; i++)	motor_control[i].iq = motor_control[i].alphaM / motor_control[i].CmEst;
 
 			for(i=2; i<4; i++)
@@ -599,7 +599,12 @@ void logic_loop(void)
 					 motor_control[i].iq = I_LIMIT;
 				else if ( motor_control[i].iq < -I_LIMIT )
 					 motor_control[i].iq = -I_LIMIT;
-			 }
+			}
+
+			if(sweep.k <= 1)
+				 motor_control[3].iq = 15;
+			else
+				motor_control[3].iq = 0;
 
 			for(i=2; i<4; i++) TMC4671_highLevel_setTorqueTargetA(i, motor_control[i].iq);
 
@@ -623,8 +628,6 @@ void logic_loop(void)
 					for (i = 2; i < 4; i++) data1[index].alphaEst[i-2]       = motor_control[i].alphaEst;
 					for (i = 2; i < 4; i++) data1[index].alphaFrict[i-2]	= motor_control[i].alphaFrict;
 				}
-				 // data1[sweep.k].alphaM[0] = alphaMold2;
-				 // data1[sweep.k].alphaM[1] = alphaMold3;
 
 				 if(!mode_matlab && index > DATA_N-20)
 				 {
@@ -645,12 +648,7 @@ void logic_loop(void)
 					}
 				}
 				sweep.k++;
-				// sweep.rate_counter = 0;
-			// }
-			// else
-			// {
-			// 	sweep.rate_counter++;
-			// }
+
 		}
 		else if(mode == MODE_POSITION_STEP)
 		{
@@ -917,13 +915,14 @@ void logic_loop(void)
 			{
 				mode = MODE_SWEEP;
 
-				sweep.rate = 1;
-				sweep.rate_counter = 1;
+				sweep.rate = 4;
+				sweep.rate_counter = 4;
 				sweep.Ta = TA;
 
 				sweep.k = 0;
 				sweep.mode = M3;
-				sweep.U = 10;
+				// sweep.U = 10;
+				sweep.U = 1;
 				sweep.omegaStart = 2 * M_PI * 5;
 				sweep.omegaEnd = 2 * M_PI * 30;
 				stats = false;
@@ -936,14 +935,21 @@ void logic_loop(void)
 				mode = MODE_SWEEP;
 
 				sweep.rate = 1;
-				sweep.rate_counter = 1;
+				// sweep.rate_counter = 8;
 				sweep.Ta = TA;
-
 				sweep.k = 0;
 				sweep.mode = M3;
-				sweep.U = 20;
-				sweep.omegaStart = 2 * M_PI * 10;
-				sweep.omegaEnd = 2 * M_PI * 100;
+
+
+				sweep.U = 1.5;
+				sweep.rate = 8;
+				sweep.omegaStart = 2 * M_PI * 0.5;
+				sweep.omegaEnd = 2 * M_PI * 15;
+
+				// sweep.U = 2;
+				// sweep.rate = 1;
+				// sweep.omegaStart = 2 * M_PI * 10;
+				// sweep.omegaEnd = 2 * M_PI * 100;
 				stats = false;
 			}
 			break;

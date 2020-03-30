@@ -53,10 +53,10 @@ void disturbanceObserver(control_t* ctrl)
 	ctrl->ePhi 			= dob->ePhi;
 
 	//outputs
-	//ctrl->alphaFB =   ctrl->kFB0 * ( ctrl->phiDes   - ctrl->phiEst )
-	//				+ ctrl->kFB1 * ( ctrl->omegaDes - ctrl->omegaEst );
+	ctrl->alphaFB =   ctrl->kFB0 * ( ctrl->phiDes   - ctrl->phiEst )
+					+ ctrl->kFB1 * ( ctrl->omegaDes - ctrl->omegaEst );
 
-	ctrl->alphaFB = biquad(&(ctrl->bqFB),  ( ctrl->phiDes - ctrl->phiEst ) );
+	// ctrl->alphaFB = biquad(&(ctrl->bqFB),  ( ctrl->phiDes - ctrl->phiEst ) );
 
 
 	// ctrl->alphaFB = biquad(&(ctrl->bqFB), ctrl->alphaFB);
