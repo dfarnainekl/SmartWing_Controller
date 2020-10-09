@@ -14,7 +14,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_MOTOR_TYPE_N_POLE_PAIRS, (3 << TMC4671_MOTOR_TYPE_SHIFT) | (7 << TMC4671_N_POLE_PAIRS_SHIFT)); // BLDC, 7 pole pairs
 	tmc4671_writeInt(drv, TMC4671_PWM_POLARITIES, 0); // LS and HS polarity off
 	tmc4671_writeInt(drv, TMC4671_PWM_MAXCNT, 3999); // 3999 --> 25kHz PWM
-	tmc4671_writeInt(drv, TMC4671_PWM_BBM_H_BBM_L, (25 << TMC4671_PWM_BBM_H_SHIFT) | (25 << TMC4671_PWM_BBM_L_SHIFT)); // LS and HS 100ns BBM
+	tmc4671_writeInt(drv, TMC4671_PWM_BBM_H_BBM_L, (30 << TMC4671_PWM_BBM_H_SHIFT) | (30 << TMC4671_PWM_BBM_L_SHIFT)); // LS and HS 300ns BBM
 	tmc4671_writeInt(drv, TMC4671_PWM_SV_CHOP, (0 << TMC4671_PWM_SV_SHIFT) | (7 << TMC4671_PWM_CHOP_SHIFT)); // Space Vector PWM disabled, centered PWM for FOC
 
 	// ADC configuration
@@ -69,7 +69,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (100 << TMC4671_PID_FLUX_P_SHIFT) | (2600 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (140 << TMC4671_PID_TORQUE_P_SHIFT) | (2900 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (8000 << TMC4671_PID_VELOCITY_P_SHIFT) | (500 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // velocity PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (600 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // position PI TODO optimize
 
 	// // Actual Velocity Biquad settings (lowpass 2nd order, f=500, d=1.0)
 	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
@@ -422,7 +422,6 @@ void TMC4671_highLevel_openLoopTest(uint8_t drv)
 }
 
 
-
 void TMC4671_highLevel_openLoopTest2(uint8_t drv) // to verify correct encoder initialisation
 {
 	// Open loop settings
@@ -436,5 +435,32 @@ void TMC4671_highLevel_openLoopTest2(uint8_t drv) // to verify correct encoder i
 
 	// Switch to open loop velocity mode
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 8); // uq_ud_ext
+	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 10); // rotate right, velocity target 1
+}
+
+
+void TMC4671_highLevel_openLoopTest3(uint8_t drv) // low duty cycle operation for high current without overheating
+{
+	// Open loop settings
+	tmc4671_writeInt(drv, TMC4671_OPENLOOP_MODE, 0x00000000); // openloop phi positive
+	tmc4671_writeInt(drv, TMC4671_OPENLOOP_ACCELERATION, 60); // openloop phi acceleration
+	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 0); // velocity target 0
+
+	// Feedback selection
+	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 2); // phi_e_openloop
+	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (5000 << TMC4671_UD_EXT_SHIFT)); // uq=0, ud=5000 --> ~40-50Amotor @ 20Vin
+
+	// Switch to open loop velocity mode
+	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 8); // uq_ud_ext
 	tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 1); // rotate right, velocity target 1
+
+	while(1)
+	{
+		HAL_Delay(10000);
+		tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0); // stopped
+		tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 0); // velocity target 0
+		HAL_Delay(50000);
+		tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 8); // uq_ud_ext
+		tmc4671_writeInt(drv, TMC4671_OPENLOOP_VELOCITY_TARGET, 1); // rotate right, velocity target 1
+	}
 }
