@@ -5,6 +5,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+
+#define POLE_PAIRS 7
+
+
 void TMC4671_highLevel_init(uint8_t drv);
 
 void TMC4671_highLevel_pwmOff(uint8_t drv);
@@ -42,7 +46,10 @@ int32_t TMC4671_highLevel_getPositionActual(uint8_t drv);
 
 //Test functions
 void TMC4671_highLevel_positionTest(uint8_t drv);
+void TMC4671_highLevel_velocityTest(uint8_t drv);
 void TMC4671_highLevel_torqueTest(uint8_t drv);
 void TMC4671_highLevel_openLoopTest(uint8_t drv);
+
+void TMC4671_highLevel_referenceEndStop(uint8_t drv);
 
 #endif /* TMC4671_TMC4671_HIGHLEVEL_H_ */
