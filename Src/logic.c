@@ -58,7 +58,7 @@ void logic_init(void)
 	uint16_t len = 0;
 
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
-	HAL_Delay(5000);
+	HAL_Delay(100);
 
 	for(i=0; i<4; i++) tmc6200_highLevel_init(i);
 	HAL_Delay(10);
@@ -69,9 +69,26 @@ void logic_init(void)
 	for(i=0; i<4; i++) TMC4671_highLevel_init(i);
 	HAL_Delay(10);
 
-	TMC4671_highLevel_openLoopTest3(3);
+	HAL_Delay(1000);
 
-//	for(i=0; i<4; i++) as5047U_setABIResolution14Bit(i); //FIXME
+//	for(i=0; i<4; i++) as5047U_setABIResolution14Bit(i); //FIXME also change ppr setting to 16384
+
+	TMC4671_highLevel_initEncoder(1);
+
+	HAL_Delay(1000);
+
+	TMC4671_highLevel_referenceEndStop(1);
+
+	HAL_Delay(1000);
+
+	while(1)
+	{
+		TMC4671_highLevel_setPosition(1, 1500000);
+		HAL_Delay(1000);
+		TMC4671_highLevel_setPosition(1, 0);
+		HAL_Delay(1000);
+	}
+
 //	for(i=0; i<4; i++)  TMC4671_highLevel_stoppedMode(i);
 //
 //

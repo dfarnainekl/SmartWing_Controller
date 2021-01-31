@@ -12,7 +12,7 @@ static void spiMode_set(uint8_t drv)
 
 	if (HAL_SPI_Init(swdriver[drv].SPI) != HAL_OK)
 	{
-		_Error_Handler(__FILE__, __LINE__);
+//		_Error_Handler(__FILE__, __LINE__);
 	}
 	HAL_Delay(2);
 }
@@ -24,7 +24,7 @@ static void spiMode_reset(uint8_t drv)
 
 	if (HAL_SPI_Init(swdriver[drv].SPI) != HAL_OK)
 	{
-		_Error_Handler(__FILE__, __LINE__);
+//		_Error_Handler(__FILE__, __LINE__);
 	}
 	HAL_Delay(2);
 }
