@@ -83,7 +83,7 @@ void logic_init(void)
 
 	while(1)
 	{
-		TMC4671_highLevel_setPosition(1, 1500000);
+		TMC4671_highLevel_setPosition(1, 7000000); //FIXME linear drive 1500000
 		HAL_Delay(1000);
 		TMC4671_highLevel_setPosition(1, 0);
 		HAL_Delay(1000);
