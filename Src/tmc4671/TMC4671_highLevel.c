@@ -45,14 +45,6 @@ void TMC4671_highLevel_init(uint8_t drv)
 	// ABN encoder settings
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_MODE, 0); // standard polarity and count direction, don't clear at n pulse
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PPR, 2048); // decoder pulses per revolution
-	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0); // decoder angle 0 FIXME: writing anything else doesn't work but writing current angle would allow for more elegant solution. 3 lines below could be deleted, see git history
-	//uint16_t angle_current = (as5147_getAngle(drv) << 5);  // current decoder angle
-	//swdriver[drv].ofs_enc_phim += angle_current;
-	//tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((swdriver[drv].ofs_phim_phie << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) & 0xFFFF0000) | ((swdriver[drv].ofs_enc_phim << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT) & 0x0000FFFF));
-	//tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, (int32_t)swdriver[drv].ofs_enc_phim); // set position to current position
-	//tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, ((0 << TMC4671_ABN_DECODER_PHI_E_OFFSET_SHIFT) & 0xFFFF0000) | ((0 << TMC4671_ABN_DECODER_PHI_M_OFFSET_SHIFT) & 0x0000FFFF));
-	//tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, (int32_t)0); // set position to current position
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, 0);
 
 	// Feedback selection
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 3); // phi_e_abn
@@ -65,30 +57,13 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 10000); // torque/flux limit 20A TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_ACCELERATION_LIMIT, 10000); // acceleration limit TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_LIMIT, 10000); // velocity limit TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_LOW, -655335); // position lower limit -1 turn TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_HIGH, 2359260); // position upper limit, 36 turns  TODO optimize
-
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_LOW, 0); // position lower limit TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_HIGH, 13107000); // position upper limit, 200 turns * 65535 TODO optimize
 	// PI settings
 	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (100 << TMC4671_PID_FLUX_P_SHIFT) | (1000 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (100 << TMC4671_PID_TORQUE_P_SHIFT) | (1000 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (5000 << TMC4671_PID_VELOCITY_P_SHIFT) | (10000 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (500 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // position PI TODO optimize
-
-	// // Actual Velocity Biquad settings (lowpass 2nd order, f=500, d=1.0)
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 946788180);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 10); // biquad_v_a_2
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -417422437);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 12); // biquad_v_b_0
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 13); // biquad_v_b_1
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 3752585);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 14); // biquad_v_b_2
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1876292);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 15); // biquad_v_enable
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
-
 
 	// Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
@@ -104,21 +79,6 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 15); // biquad_v_enable
 	tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
-
-	// // Target Position Biquad settings (lowpass 2nd order, f=20, d=1.0)
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 1); // biquad_x_a_1
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1068358140);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 2); // biquad_x_a_2
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, -531500724);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 4); // biquad_x_b_0
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 3374);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 5); // biquad_x_b_1
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 6748);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 6); // biquad_x_b_2
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 3374);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 7); // biquad_x_enable
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_DATA, 1);
-	// tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 0); //none
 
 	// Target Position Biquad settings (lowpass 2nd order, f=100, d=1.0)
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 1); // biquad_x_a_1

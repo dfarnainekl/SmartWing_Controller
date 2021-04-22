@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under BSD 3-Clause license,
@@ -50,7 +50,7 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, DRV4_CSN_CTR_Pin|DRV3_CSN_DRV_Pin|DRV4_CSN_DRV_Pin|DRV4_CSN_ENC_Pin 
+  HAL_GPIO_WritePin(GPIOC, DRV4_CSN_CTR_Pin|DRV3_CSN_DRV_Pin|DRV4_CSN_DRV_Pin|DRV4_CSN_ENC_Pin
                           |DRV3_CSN_ENC_Pin|DRV2_CSN_CTR_Pin|DRV1_CSN_CTR_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
@@ -77,9 +77,9 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PCPin PCPin PCPin PCPin 
+  /*Configure GPIO pins : PCPin PCPin PCPin PCPin
                            PCPin PCPin PCPin */
-  GPIO_InitStruct.Pin = DRV4_CSN_CTR_Pin|DRV3_CSN_DRV_Pin|DRV4_CSN_DRV_Pin|DRV4_CSN_ENC_Pin 
+  GPIO_InitStruct.Pin = DRV4_CSN_CTR_Pin|DRV3_CSN_DRV_Pin|DRV4_CSN_DRV_Pin|DRV4_CSN_ENC_Pin
                           |DRV3_CSN_ENC_Pin|DRV2_CSN_CTR_Pin|DRV1_CSN_CTR_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -100,9 +100,9 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PDPin PDPin PDPin PDPin 
+  /*Configure GPIO pins : PDPin PDPin PDPin PDPin
                            PDPin PDPin PDPin PDPin */
-  GPIO_InitStruct.Pin = LED_RED_Pin|DRV1_CSN_ENC_Pin|DRV2_CSN_DRV_Pin|DRV2_CSN_ENC_Pin 
+  GPIO_InitStruct.Pin = LED_RED_Pin|DRV1_CSN_ENC_Pin|DRV2_CSN_DRV_Pin|DRV2_CSN_ENC_Pin
                           |DRV1_CSN_DRV_Pin|CAN1_STBY_Pin|DRV1_EN_Pin|DRV2_EN_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;

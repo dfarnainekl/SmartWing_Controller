@@ -6,7 +6,7 @@
     <WorkspacePath>/home/daniel/Dropbox/Workspaces/STM32CubeIDE/SmartWing_Controller/</WorkspacePath>
     <underRoot>true</underRoot>
     <TrustZone>0</TrustZone>
-    <HAL_Driver>/home/daniel/STM32Cube/Repository//STM32Cube_FW_H7_V1.5.0</HAL_Driver>
+    <HAL_Driver>/home/daniel/STM32Cube/Repository//STM32Cube_FW_H7_V1.8.0</HAL_Driver>
     <CMSIS>Drivers/CMSIS</CMSIS>
     <Toolchain>STM32CubeIDE</Toolchain>
     <IocFile>SmartWing_Controller.ioc</IocFile>
@@ -14,7 +14,17 @@
       <ProjectName>SmartWing_Controller</ProjectName>
       <ProjectNature>C</ProjectNature>
       <Secure/>
-      <filestoremove/>
+      <filestoremove>
+        <file>
+          <name>Src/adc.c</name>
+        </file>
+        <file>
+          <name>Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c</name>
+        </file>
+        <file>
+          <name>Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c</name>
+        </file>
+      </filestoremove>
       <sourceEntriesToRemove>
         <sourceEntry/>
       </sourceEntriesToRemove>
@@ -34,7 +44,7 @@
             <memory access="xrw" name="ITCMRAM" size="64" start="0x00000000"/>
             <memory access="rx" name="FLASH" size="2048" start="0x8000000"/>
           </memories>
-          <startup>/home/daniel/STM32Cube/Repository//STM32Cube_FW_H7_V1.5.0/Drivers/CMSIS/Device\ST\STM32H7xx\Source\Templates\gcc\startup_stm32h743xx.s</startup>
+          <startup>/home/daniel/STM32Cube/Repository/STM32Cube_FW_H7_V1.8.0/Drivers/CMSIS/Device\ST\STM32H7xx\Source\Templates\gcc\startup_stm32h743xx.s</startup>
           <LinkSettings>
             <LinkAdditionalLibs/>
           </LinkSettings>

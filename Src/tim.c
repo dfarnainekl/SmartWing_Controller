@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2021 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under BSD 3-Clause license,
@@ -92,13 +92,13 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
   /* USER CODE END TIM2_MspInit 0 */
     /* TIM2 clock enable */
     __HAL_RCC_TIM2_CLK_ENABLE();
-  
+
     __HAL_RCC_GPIOA_CLK_ENABLE();
-    /**TIM2 GPIO Configuration    
+    /**TIM2 GPIO Configuration
     PA0     ------> TIM2_CH1
     PA1     ------> TIM2_CH2
     PA2     ------> TIM2_CH3
-    PA3     ------> TIM2_CH4 
+    PA3     ------> TIM2_CH4
     */
     GPIO_InitStruct.Pin = PWM_IN_0_Pin|PWM_IN_1_Pin|PWM_IN_2_Pin|PWM_IN_3_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
@@ -126,12 +126,12 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
   /* USER CODE END TIM2_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_TIM2_CLK_DISABLE();
-  
-    /**TIM2 GPIO Configuration    
+
+    /**TIM2 GPIO Configuration
     PA0     ------> TIM2_CH1
     PA1     ------> TIM2_CH2
     PA2     ------> TIM2_CH3
-    PA3     ------> TIM2_CH4 
+    PA3     ------> TIM2_CH4
     */
     HAL_GPIO_DeInit(GPIOA, PWM_IN_0_Pin|PWM_IN_1_Pin|PWM_IN_2_Pin|PWM_IN_3_Pin);
 
@@ -141,7 +141,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 
   /* USER CODE END TIM2_MspDeInit 1 */
   }
-} 
+}
 
 /* USER CODE BEGIN 1 */
 
