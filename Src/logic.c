@@ -4,13 +4,14 @@
 #include "tmc4671/TMC4671_highLevel.h"
 #include "tmc4671/TMC4671.h"
 #include "as5047U.h"
+#include "as5147.h"
 #include "tim.h"
 #include <stdbool.h>
 #include <math.h>
 
 
 volatile uint16_t pwm_in[4] = {1500, 1500, 1500, 1500};
-
+uint32_t positions[4] = {0, 0, 0, 0};
 
 void logic_init(void)
 {
@@ -35,27 +36,43 @@ void logic_init(void)
 	TMC4671_highLevel_init(3);
 	HAL_Delay(10);
 
-//	for(i=0; i<4; i++) as5047U_setABIResolution14Bit(i); //FIXME also change ppr setting to 16384
-
 	TMC4671_highLevel_initEncoder(1);
 
 	HAL_Delay(100);
 
-	tmc4671_writeInt(1, TMC4671_PID_POSITION_ACTUAL, 0);
-//	TMC4671_highLevel_referenceEndStop(1);
+	tmc4671_writeInt(1, TMC4671_PID_POSITION_ACTUAL, (uint32_t)((float)as5147_getAngleOtherEnc(1) * 231.1222));
 
 	TMC4671_highLevel_positionMode(1);
 
 	HAL_Delay(100);
 }
 
-
 void logic_loop(void)
 {
-	TMC4671_highLevel_setPosition(1, 65535); //5276800
-	HAL_Delay(1000);
-	TMC4671_highLevel_setPosition(1, 0);
-	HAL_Delay(1000);
+	for(uint8_t i=0; i<4; i++)
+	{
+		uint32_t position = pwm_in[i];
+		if(position < 1000) position = 1000;
+		if(position > 2000) position = 2000;
+		position -= 1000;
+		positions[i] = (uint32_t)(0.1 * ((65535.0 * 150.0) * (position / 1000.0) + 0.5) + 0.9 * (float)positions[i]);
+	}
+
+	TMC4671_highLevel_setPosition(1, positions[0]);
+
+	//if position close to target, turn off motor FIXME
+	uint16_t angle_correct_counter = 0;
+	if((abs((int32_t)TMC4671_highLevel_getPositionActual(1) - (int32_t)TMC4671_highLevel_getPositionTarget(1)) < 65535) && angle_correct_counter < 65535)
+		angle_correct_counter++;
+	else
+		angle_correct_counter = 0;
+
+	if(angle_correct_counter > 100)
+		swdriver_setEnable(1, false);
+	else
+		swdriver_setEnable(1, true);
+
+	HAL_Delay(1);
 }
 
 

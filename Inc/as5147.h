@@ -6,6 +6,7 @@
 
 
 uint16_t as5147_getAngle(uint8_t drv);
+uint16_t as5147_getAngleOtherEnc(uint8_t drv);
 
 
 #endif /* AS5147_H_ */

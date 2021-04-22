@@ -60,10 +60,10 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_LOW, 0); // position lower limit TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_HIGH, 13107000); // position upper limit, 200 turns * 65535 TODO optimize
 	// PI settings
-	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (100 << TMC4671_PID_FLUX_P_SHIFT) | (1000 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (100 << TMC4671_PID_TORQUE_P_SHIFT) | (1000 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (5000 << TMC4671_PID_VELOCITY_P_SHIFT) | (10000 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (500 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // position PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (100 << TMC4671_PID_FLUX_P_SHIFT) | (800 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_P_TORQUE_I, (100 << TMC4671_PID_TORQUE_P_SHIFT) | (800 << TMC4671_PID_TORQUE_I_SHIFT)); // torque PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_P_VELOCITY_I, (4000 << TMC4671_PID_VELOCITY_P_SHIFT) | (8000 << TMC4671_PID_VELOCITY_I_SHIFT)); // velocity PI TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_P_POSITION_I, (300 << TMC4671_PID_POSITION_P_SHIFT) | (0 << TMC4671_PID_POSITION_I_SHIFT)); // position PI TODO optimize
 
 	// Actual Velocity Biquad settings (lowpass 2nd order, f=200, d=1.0)
 	tmc4671_writeInt(drv, TMC4671_CONFIG_ADDR, 9); // biquad_v_a_1
