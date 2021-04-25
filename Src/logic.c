@@ -40,7 +40,7 @@ void logic_init(void)
 
 	HAL_Delay(100);
 
-	tmc4671_writeInt(1, TMC4671_PID_POSITION_ACTUAL, (uint32_t)((float)as5147_getAngleOtherEnc(1) * 231.1222));
+	tmc4671_writeInt(1, TMC4671_PID_POSITION_ACTUAL, (uint32_t)((float)as5147_getAngleOtherEnc(1) * 32 * 231.1222));
 
 	TMC4671_highLevel_positionMode(1);
 
@@ -60,14 +60,14 @@ void logic_loop(void)
 
 	TMC4671_highLevel_setPosition(1, positions[0]);
 
-	//if position close to target, turn off motor FIXME
-	uint16_t angle_correct_counter = 0;
+	//if position close to target, turn off motor
+	static uint16_t angle_correct_counter = 0;
 	if((abs((int32_t)TMC4671_highLevel_getPositionActual(1) - (int32_t)TMC4671_highLevel_getPositionTarget(1)) < 65535) && angle_correct_counter < 65535)
 		angle_correct_counter++;
 	else
 		angle_correct_counter = 0;
 
-	if(angle_correct_counter > 100)
+	if(angle_correct_counter > 500)
 		swdriver_setEnable(1, false);
 	else
 		swdriver_setEnable(1, true);
