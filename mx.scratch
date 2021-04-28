@@ -14,17 +14,7 @@
       <ProjectName>SmartWing_Controller</ProjectName>
       <ProjectNature>C</ProjectNature>
       <Secure/>
-      <filestoremove>
-        <file>
-          <name>Src/adc.c</name>
-        </file>
-        <file>
-          <name>Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c</name>
-        </file>
-        <file>
-          <name>Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c</name>
-        </file>
-      </filestoremove>
+      <filestoremove/>
       <sourceEntriesToRemove>
         <sourceEntry/>
       </sourceEntriesToRemove>
@@ -51,6 +41,7 @@
           <heapSize>0x200</heapSize>
           <stackSize>0x400</stackSize>
           <board>custom</board>
+          <debugprobe>swd</debugprobe>
           <optimization/>
           <Aincludes>
             <include/>

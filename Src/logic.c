@@ -13,6 +13,19 @@
 volatile uint16_t pwm_in[4] = {1500, 1500, 1500, 1500};
 uint32_t positions[4] = {0, 0, 0, 0};
 
+void update_positions(bool noFilter)
+{
+	for(uint8_t i=0; i<4; i++)
+	{
+		uint32_t position = pwm_in[i];
+		if(position < 1000) position = 1000;
+		if(position > 2000) position = 2000;
+		position -= 1000;
+		if(noFilter) positions[i] = (uint32_t)((65535.0 * 150.0) * (position / 1000.0) + 0.5);
+		else positions[i] = (uint32_t)(0.1 * ((65535.0 * 150.0) * (position / 1000.0) + 0.5) + 0.9 * (float)positions[i]);
+	}
+}
+
 void logic_init(void)
 {
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
@@ -37,40 +50,51 @@ void logic_init(void)
 	HAL_Delay(10);
 
 	TMC4671_highLevel_initEncoder(1);
+	TMC4671_highLevel_initEncoder(3);
 
 	HAL_Delay(100);
 
 	tmc4671_writeInt(1, TMC4671_PID_POSITION_ACTUAL, (uint32_t)((float)as5147_getAngleOtherEnc(1) * 32 * 231.1222));
+	tmc4671_writeInt(3, TMC4671_PID_POSITION_ACTUAL, (uint32_t)((float)as5147_getAngleOtherEnc(3) * 32 * 231.1222));
 
-	TMC4671_highLevel_positionMode(1);
+	update_positions(true);
+	TMC4671_highLevel_setPosition(1, positions[0]);
+	TMC4671_highLevel_setPosition(3, positions[1]);
+
+	TMC4671_highLevel_positionMode2(1);
+	TMC4671_highLevel_positionMode2(3);
 
 	HAL_Delay(100);
 }
 
 void logic_loop(void)
 {
-	for(uint8_t i=0; i<4; i++)
-	{
-		uint32_t position = pwm_in[i];
-		if(position < 1000) position = 1000;
-		if(position > 2000) position = 2000;
-		position -= 1000;
-		positions[i] = (uint32_t)(0.1 * ((65535.0 * 150.0) * (position / 1000.0) + 0.5) + 0.9 * (float)positions[i]);
-	}
-
+	update_positions(false);
 	TMC4671_highLevel_setPosition(1, positions[0]);
+	TMC4671_highLevel_setPosition(3, positions[1]);
 
 	//if position close to target, turn off motor
-	static uint16_t angle_correct_counter = 0;
-	if((abs((int32_t)TMC4671_highLevel_getPositionActual(1) - (int32_t)TMC4671_highLevel_getPositionTarget(1)) < 65535) && angle_correct_counter < 65535)
-		angle_correct_counter++;
+	static uint16_t angle_correct_counter_1 = 0;
+	if((abs((int32_t)TMC4671_highLevel_getPositionActual(1) - (int32_t)TMC4671_highLevel_getPositionTarget(1)) < 65535) && angle_correct_counter_1 < 65535)
+		angle_correct_counter_1++;
 	else
-		angle_correct_counter = 0;
+		angle_correct_counter_1 = 0;
 
-	if(angle_correct_counter > 500)
+	if(angle_correct_counter_1 > 500)
 		swdriver_setEnable(1, false);
 	else
 		swdriver_setEnable(1, true);
+
+	static uint16_t angle_correct_counter_3 = 0;
+	if((abs((int32_t)TMC4671_highLevel_getPositionActual(3) - (int32_t)TMC4671_highLevel_getPositionTarget(3)) < 65535) && angle_correct_counter_3 < 65535)
+		angle_correct_counter_3++;
+	else
+		angle_correct_counter_3 = 0;
+
+	if(angle_correct_counter_3 > 500)
+		swdriver_setEnable(3, false);
+	else
+		swdriver_setEnable(3, true);
 
 	HAL_Delay(1);
 }

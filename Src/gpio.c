@@ -35,6 +35,8 @@
      PA10   ------> USB_OTG_FS_ID
      PA11   ------> USB_OTG_FS_DM
      PA12   ------> USB_OTG_FS_DP
+     PA13 (JTMS/SWDIO)   ------> DEBUG_JTMS-SWDIO
+     PA14 (JTCK/SWCLK)   ------> DEBUG_JTCK-SWCLK
 */
 void MX_GPIO_Init(void)
 {
