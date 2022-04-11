@@ -38,65 +38,45 @@ void logic_init(void)
 	HAL_Delay(100);
 
 	tmc6200_highLevel_init(1);
-	tmc6200_highLevel_init(3);
 	HAL_Delay(10);
 
 	swdriver_setEnable(1, true);
-	swdriver_setEnable(3, true);
 	HAL_Delay(10);
 
 	TMC4671_highLevel_init(1);
-	TMC4671_highLevel_init(3);
 	HAL_Delay(10);
 
 	TMC4671_highLevel_initEncoder(1);
-	TMC4671_highLevel_initEncoder(3);
 
 	HAL_Delay(100);
 
-	tmc4671_writeInt(1, TMC4671_PID_POSITION_ACTUAL, (uint32_t)((float)as5147_getAngleOtherEnc(1) * 32 * 231.1222));
-	tmc4671_writeInt(3, TMC4671_PID_POSITION_ACTUAL, (uint32_t)((float)as5147_getAngleOtherEnc(3) * 32 * 231.1222));
+//	TMC4671_highLevel_openLoopTest(1);
 
-	update_positions(true);
-	TMC4671_highLevel_setPosition(1, positions[0]);
-	TMC4671_highLevel_setPosition(3, positions[1]);
-
-	TMC4671_highLevel_positionMode2(1);
-	TMC4671_highLevel_positionMode2(3);
+	TMC4671_highLevel_referenceEndStop(1); // also actiavtes position mode
 
 	HAL_Delay(100);
 }
 
 void logic_loop(void)
 {
-	update_positions(false);
-	TMC4671_highLevel_setPosition(1, positions[0]);
-	TMC4671_highLevel_setPosition(3, positions[1]);
+	HAL_Delay(2500);
+	TMC4671_highLevel_setPosition(1, 65535 * 3);
+	HAL_Delay(2500);
+	TMC4671_highLevel_setPosition(1, 0);
 
-	//if position close to target, turn off motor
-	static uint16_t angle_correct_counter_1 = 0;
-	if((abs((int32_t)TMC4671_highLevel_getPositionActual(1) - (int32_t)TMC4671_highLevel_getPositionTarget(1)) < 65535) && angle_correct_counter_1 < 65535)
-		angle_correct_counter_1++;
-	else
-		angle_correct_counter_1 = 0;
-
-	if(angle_correct_counter_1 > 500)
-		swdriver_setEnable(1, false);
-	else
-		swdriver_setEnable(1, true);
-
-	static uint16_t angle_correct_counter_3 = 0;
-	if((abs((int32_t)TMC4671_highLevel_getPositionActual(3) - (int32_t)TMC4671_highLevel_getPositionTarget(3)) < 65535) && angle_correct_counter_3 < 65535)
-		angle_correct_counter_3++;
-	else
-		angle_correct_counter_3 = 0;
-
-	if(angle_correct_counter_3 > 500)
-		swdriver_setEnable(3, false);
-	else
-		swdriver_setEnable(3, true);
-
-	HAL_Delay(1);
+//	//if position close to target, turn off motor
+//	static uint16_t angle_correct_counter_1 = 0;
+//	if((abs((int32_t)TMC4671_highLevel_getPositionActual(1) - (int32_t)TMC4671_highLevel_getPositionTarget(1)) < 65535) && angle_correct_counter_1 < 65535)
+//		angle_correct_counter_1++;
+//	else
+//		angle_correct_counter_1 = 0;
+//
+//	if(angle_correct_counter_1 > 500)
+//		swdriver_setEnable(1, false);
+//	else
+//		swdriver_setEnable(1, true);
+//
+//	HAL_Delay(1);
 }
 
 
