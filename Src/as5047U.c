@@ -4,6 +4,8 @@
 #include "usart.h"
 #include <limits.h>
 #include <string.h>
+#include <stdio.h>
+
 
 static void spiMode_set(uint8_t drv)
 {

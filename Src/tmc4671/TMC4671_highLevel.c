@@ -4,6 +4,7 @@
 #include "swdriver.h"
 #include "usart.h"
 #include "as5047U.h"
+#include <stdio.h>
 
 //TODO: use functions from TMC4671.c, use masking
 void TMC4671_highLevel_init(uint8_t drv)
