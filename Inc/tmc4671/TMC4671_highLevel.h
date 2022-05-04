@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 
-#define POLE_PAIRS 12
+#define POLE_PAIRS 7
 
 
 void TMC4671_highLevel_init(uint8_t drv);

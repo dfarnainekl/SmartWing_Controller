@@ -37,7 +37,7 @@ void logic_init(void)
 void logic_loop(void)
 {
 	HAL_Delay(2500);
-	TMC4671_highLevel_setPosition(1, 65535 * 3);
+	TMC4671_highLevel_setPosition(1, -65535 * 3);
 	HAL_Delay(2500);
 	TMC4671_highLevel_setPosition(1, 0);
 

@@ -12,7 +12,7 @@ void TMC4671_highLevel_init(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0); // stopped_mode
 
 	// Motor type &  PWM configuration
-	tmc4671_writeInt(drv, TMC4671_MOTOR_TYPE_N_POLE_PAIRS, (3 << TMC4671_MOTOR_TYPE_SHIFT) | (POLE_PAIRS << TMC4671_N_POLE_PAIRS_SHIFT)); // BLDC, 7 pole pairs
+	tmc4671_writeInt(drv, TMC4671_MOTOR_TYPE_N_POLE_PAIRS, (3 << TMC4671_MOTOR_TYPE_SHIFT) | (POLE_PAIRS << TMC4671_N_POLE_PAIRS_SHIFT)); // BLDC, pole pairs
 	tmc4671_writeInt(drv, TMC4671_PWM_POLARITIES, 0); // LS and HS polarity off
 	tmc4671_writeInt(drv, TMC4671_PWM_MAXCNT, 3999); // 3999 --> 25kHz PWM
 	tmc4671_writeInt(drv, TMC4671_PWM_BBM_H_BBM_L, (30 << TMC4671_PWM_BBM_H_SHIFT) | (30 << TMC4671_PWM_BBM_L_SHIFT)); // LS and HS 300ns BBM
@@ -55,10 +55,10 @@ void TMC4671_highLevel_init(uint8_t drv)
 	// Limits
 	tmc4671_writeInt(drv, TMC4671_PIDOUT_UQ_UD_LIMITS, 23169); // UQ/UD limit TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_TARGET_DDT_LIMITS, 32767); // torque/flux ddt limit TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 10000); // torque/flux limit 20A TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 20000); // torque/flux limit 40A TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_ACCELERATION_LIMIT, 10000); // acceleration limit TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_LIMIT, 1000); // velocity limit TODO optimize
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_LOW, 0); // position lower limit TODO optimize
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_LOW, -65535 * 5); // position lower limit, -5 turns * 65535 TODO optimize
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_LIMIT_HIGH, 65535 * 5); // position upper limit, 5 turns * 65535 TODO optimize
 	// PI settings
 	tmc4671_writeInt(drv, TMC4671_PID_FLUX_P_FLUX_I, (100 << TMC4671_PID_FLUX_P_SHIFT) | (800 << TMC4671_PID_FLUX_I_SHIFT)); // flux PI TODO optimize
@@ -172,8 +172,8 @@ void TMC4671_highLevel_initEncoder(uint8_t drv)
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_PHI_E_PHI_M_OFFSET, 0x00000000);
 	tmc4671_writeInt(drv, TMC4671_PHI_E_SELECTION, 1);  // phi_e_ext
 	tmc4671_writeInt(drv, TMC4671_PHI_E_EXT, 0);
-	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (2000 << TMC4671_UD_EXT_SHIFT)); // uq=0, ud=2000
-	HAL_Delay(1000);
+	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (10000 << TMC4671_UD_EXT_SHIFT)); // uq=0, ud=2000
+	HAL_Delay(500);
 	tmc4671_writeInt(drv, TMC4671_ABN_DECODER_COUNT, 0);
 	tmc4671_writeInt(drv, TMC4671_UQ_UD_EXT, (0 << TMC4671_UQ_EXT_SHIFT) | (0 << TMC4671_UD_EXT_SHIFT)); // ud=0 uq=0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0); // off
@@ -451,17 +451,19 @@ void TMC4671_highLevel_openLoopTest3(uint8_t drv) // low duty cycle operation fo
 
 void TMC4671_highLevel_referenceEndStop(uint8_t drv)
 {
-	int32_t torque = 2000;
+	int32_t torque = 15000; // 30A
+
+	uint32_t torqueOld = tmc4671_readInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS);
 
 	//lower torque limit
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque); // torque/flux limit 2A
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torque); // torque/flux limit
 
 	// Switch to velocity mode
 	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_TARGET, (0 << TMC4671_PID_VELOCITY_TARGET_SHIFT)); // velocity target 0
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 2); // velocity_mode
 
 	// drive into end stop
-	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_TARGET, (-100 << TMC4671_PID_VELOCITY_TARGET_SHIFT)); // velocity target
+	tmc4671_writeInt(drv, TMC4671_PID_VELOCITY_TARGET, (100 << TMC4671_PID_VELOCITY_TARGET_SHIFT)); // velocity target
 
 	HAL_Delay(200);
 
@@ -474,19 +476,11 @@ void TMC4671_highLevel_referenceEndStop(uint8_t drv)
 		HAL_Delay(1);
 	}
 
-//	int32_t pos_last;
-//	do
-//	{
-//		pos_last = TMC4671_highLevel_getPositionActual(drv);
-//		HAL_Delay(100);
-//	}
-//	while(abs(TMC4671_highLevel_getPositionActual(drv) - pos_last) < 2000); //average much less than half of the target speed over the last 100ms
-
-	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, -32768); //1/2 rotation
+	tmc4671_writeInt(drv, TMC4671_PID_POSITION_ACTUAL, 8192); // -1/8 rotation
 
 	tmc4671_writeInt(drv, TMC4671_MODE_RAMP_MODE_MOTION, 0); //stopped_mode
 
-	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, 15000); // reset limit TODO: use old value
+	tmc4671_writeInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS, torqueOld); // reset limit
 
 	tmc4671_writeInt(drv, TMC4671_PID_POSITION_TARGET, 0);
 
