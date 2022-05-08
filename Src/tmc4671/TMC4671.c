@@ -61,10 +61,7 @@ void tmc4671_writeInt_nonBlocking(uint8_t motor, uint8_t address, int32_t value)
 
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi) //FIXME: pfusch
 {
-	if(hspi == &hspi1)      {swdriver_setCsnController(0, true); swdriver_setCsnDriver(0, true); swdriver_setCsnEncoder(0, true);}
-	else if(hspi == &hspi2) {swdriver_setCsnController(1, true); swdriver_setCsnDriver(1, true); swdriver_setCsnEncoder(1, true);}
-	else if(hspi == &hspi3) {swdriver_setCsnController(2, true); swdriver_setCsnDriver(2, true); swdriver_setCsnEncoder(2, true);}
-	else if(hspi == &hspi4) {swdriver_setCsnController(3, true); swdriver_setCsnDriver(3, true); swdriver_setCsnEncoder(3, true);}
+	if(hspi == &hspi2) {swdriver_setCsnController(1, true); swdriver_setCsnDriver(1, true); swdriver_setCsnEncoder(1, true);}
 }
 
 

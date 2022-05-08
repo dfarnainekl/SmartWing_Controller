@@ -14,7 +14,53 @@
       <ProjectName>SmartWing_Controller</ProjectName>
       <ProjectNature>C</ProjectNature>
       <Secure/>
-      <filestoremove/>
+      <filestoremove>
+        <file>
+          <name>Src/fdcan.c</name>
+        </file>
+        <file>
+          <name>../Src/custom.c</name>
+        </file>
+        <file>
+          <name>Src/i2c.c</name>
+        </file>
+        <file>
+          <name>Src/usb_otg.c</name>
+        </file>
+        <file>
+          <name>Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_fdcan.c</name>
+        </file>
+        <file>
+          <name>gpio.h</name>
+        </file>
+        <file>
+          <name>fdcan.h</name>
+        </file>
+        <file>
+          <name>i2c.h</name>
+        </file>
+        <file>
+          <name>spi.h</name>
+        </file>
+        <file>
+          <name>tim.h</name>
+        </file>
+        <file>
+          <name>usart.h</name>
+        </file>
+        <file>
+          <name>usb_otg.h</name>
+        </file>
+        <file>
+          <name>stm32h7xx_it.h</name>
+        </file>
+        <file>
+          <name>stm32h7xx_hal_conf.h</name>
+        </file>
+        <file>
+          <name>main.h</name>
+        </file>
+      </filestoremove>
       <sourceEntriesToRemove>
         <sourceEntry/>
       </sourceEntriesToRemove>

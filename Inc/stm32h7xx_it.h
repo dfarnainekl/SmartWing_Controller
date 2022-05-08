@@ -57,11 +57,8 @@ void DebugMon_Handler(void);
 void PendSV_Handler(void);
 void SysTick_Handler(void);
 void TIM2_IRQHandler(void);
-void SPI1_IRQHandler(void);
 void SPI2_IRQHandler(void);
 void USART3_IRQHandler(void);
-void SPI3_IRQHandler(void);
-void SPI4_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
