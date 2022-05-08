@@ -36,9 +36,9 @@ void logic_init(void)
 
 void logic_loop(void)
 {
-	HAL_Delay(2500);
-	TMC4671_highLevel_setPosition(1, -65535 * 3);
-	HAL_Delay(2500);
+	HAL_Delay(2000);
+	TMC4671_highLevel_setPosition(1, 65535 * 4);
+	HAL_Delay(2000);
 	TMC4671_highLevel_setPosition(1, 0);
 
 //	//if position close to target, turn off motor
@@ -60,8 +60,7 @@ void logic_loop(void)
 void HAL_SYSTICK_Callback(void)
 {
 	// error led
-	if(swdriver_getStatus(0) || swdriver_getStatus(1) || swdriver_getStatus(2) || swdriver_getStatus(3) ||
-	   swdriver_getFault(0)  || swdriver_getFault(1)  || swdriver_getFault(2)  || swdriver_getFault(3)  )
+	if(swdriver_getStatus(1) || swdriver_getFault(1))
 	{
 		HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
 	}
