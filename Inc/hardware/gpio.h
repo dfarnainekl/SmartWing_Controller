@@ -17,8 +17,8 @@
   ******************************************************************************
   */
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __GPIO_H__
-#define __GPIO_H__
+#ifndef __GPIO_2_H__
+#define __GPIO_2_H__
 
 //#include "stm32h7xx_ll_gpio.h"
 

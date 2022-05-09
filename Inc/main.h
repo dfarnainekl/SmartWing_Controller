@@ -29,6 +29,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal.h"
+
 #include "stm32h7xx_ll_system.h"
 #include "stm32h7xx_ll_gpio.h"
 #include "stm32h7xx_ll_exti.h"
@@ -115,5 +116,3 @@ typedef enum
 #endif
 
 #endif /* __MAIN_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

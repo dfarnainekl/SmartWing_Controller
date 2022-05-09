@@ -6,7 +6,7 @@
     <WorkspacePath>/home/daniel/Dropbox/Workspaces/STM32CubeIDE/SmartWing_Controller/</WorkspacePath>
     <underRoot>true</underRoot>
     <TrustZone>0</TrustZone>
-    <HAL_Driver>/home/daniel/STM32Cube/Repository//STM32Cube_FW_H7_V1.8.0</HAL_Driver>
+    <HAL_Driver>/home/daniel/STM32Cube/Repository//STM32Cube_FW_H7_V1.9.1</HAL_Driver>
     <CMSIS>Drivers/CMSIS</CMSIS>
     <Toolchain>STM32CubeIDE</Toolchain>
     <IocFile>SmartWing_Controller.ioc</IocFile>
@@ -16,22 +16,46 @@
       <Secure/>
       <filestoremove>
         <file>
-          <name>Src/i2c.c</name>
+          <name>Core/Src/main.c</name>
         </file>
         <file>
           <name>../Src/custom.c</name>
         </file>
         <file>
-          <name>Src/usb_otg.c</name>
+          <name>Core/Src/gpio.c</name>
+        </file>
+        <file>
+          <name>Core/Src/adc.c</name>
+        </file>
+        <file>
+          <name>Core/Src/dma.c</name>
+        </file>
+        <file>
+          <name>Core/Src/fdcan.c</name>
+        </file>
+        <file>
+          <name>Core/Src/sys.c</name>
+        </file>
+        <file>
+          <name>Core/Src/stm32h7xx_it.c</name>
+        </file>
+        <file>
+          <name>Core/Src/stm32h7xx_hal_msp.c</name>
+        </file>
+        <file>
+          <name>Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c</name>
+        </file>
+        <file>
+          <name>Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c</name>
+        </file>
+        <file>
+          <name>Core/Src/system_stm32h7xx.c</name>
         </file>
         <file>
           <name>gpio.h</name>
         </file>
         <file>
           <name>fdcan.h</name>
-        </file>
-        <file>
-          <name>i2c.h</name>
         </file>
         <file>
           <name>spi.h</name>
@@ -43,19 +67,16 @@
           <name>usart.h</name>
         </file>
         <file>
-          <name>usb_otg.h</name>
+          <name>stm32h7xx_it.h</name>
         </file>
         <file>
-          <name>stm32h7xx_it.h</name>
+          <name>stm32_assert.h</name>
         </file>
         <file>
           <name>stm32h7xx_hal_conf.h</name>
         </file>
         <file>
           <name>main.h</name>
-        </file>
-        <file>
-          <name>stm32_assert.h</name>
         </file>
       </filestoremove>
       <sourceEntriesToRemove>
@@ -77,7 +98,7 @@
             <memory access="xrw" name="ITCMRAM" size="64" start="0x00000000"/>
             <memory access="rx" name="FLASH" size="2048" start="0x8000000"/>
           </memories>
-          <startup>/home/daniel/STM32Cube/Repository/STM32Cube_FW_H7_V1.8.0/Drivers/CMSIS/Device\ST\STM32H7xx\Source\Templates\gcc\startup_stm32h743xx.s</startup>
+          <startup>/home/daniel/STM32Cube/Repository/STM32Cube_FW_H7_V1.9.1/Drivers/CMSIS/Device\ST\STM32H7xx\Source\Templates\gcc\startup_stm32h743xx.s</startup>
           <LinkSettings>
             <LinkAdditionalLibs/>
           </LinkSettings>

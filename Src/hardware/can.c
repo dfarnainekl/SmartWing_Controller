@@ -283,34 +283,34 @@ void Can_AddStdFilter(uint32_t can_handle_index, uint32_t filter_index, uint32_t
 }
 Result_t Can_Init(uint8_t node_id)
 {
-//	HAL_FDCAN_ConfigTxDelayCompensation(&hfdcan1, 12, 0);
-//	HAL_FDCAN_EnableTxDelayCompensation(&hfdcan1);
-//
-//	HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
-//
-//	Can_MessageId_t mask = { 0 };
-//	mask.info.direction = 0x1;
-//	mask.info.node_id = 0x1F;
-//	mask.info.special_cmd = 0x3;
-//	Can_MessageId_t id = { 0 };
-//	id.info.direction = MASTER2NODE_DIRECTION;
-//	id.info.special_cmd = STANDARD_SPECIAL_CMD;
-//
-//	FDCAN_FilterTypeDef filter;
-//	filter.IdType = FDCAN_STANDARD_ID;
-//	filter.FilterType = FDCAN_FILTER_MASK;
-//	filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-//	filter.FilterID2 = mask.uint32;
-//
-//	id.info.node_id = node_id;
-//	filter.FilterID1 = id.uint32;
-//	filter.FilterIndex = 0;
-//	HAL_FDCAN_ConfigFilter(&hfdcan1, &filter);
-//
-//	id.info.node_id = 0;
-//	filter.FilterID1 = id.uint32;
-//	filter.FilterIndex = 1;
-//	HAL_FDCAN_ConfigFilter(&hfdcan1, &filter);
+	HAL_FDCAN_ConfigTxDelayCompensation(&hfdcan1, 12, 0);
+	HAL_FDCAN_EnableTxDelayCompensation(&hfdcan1);
+
+	HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
+
+	Can_MessageId_t mask = { 0 };
+	mask.info.direction = 0x1;
+	mask.info.node_id = 0x1F;
+	mask.info.special_cmd = 0x3;
+	Can_MessageId_t id = { 0 };
+	id.info.direction = MASTER2NODE_DIRECTION;
+	id.info.special_cmd = STANDARD_SPECIAL_CMD;
+
+	FDCAN_FilterTypeDef filter;
+	filter.IdType = FDCAN_STANDARD_ID;
+	filter.FilterType = FDCAN_FILTER_MASK;
+	filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
+	filter.FilterID2 = mask.uint32;
+
+	id.info.node_id = node_id;
+	filter.FilterID1 = id.uint32;
+	filter.FilterIndex = 0;
+	HAL_FDCAN_ConfigFilter(&hfdcan1, &filter);
+
+	id.info.node_id = 0;
+	filter.FilterID1 = id.uint32;
+	filter.FilterIndex = 1;
+	HAL_FDCAN_ConfigFilter(&hfdcan1, &filter);
 
 	HAL_FDCAN_Start(&hfdcan1);
 
