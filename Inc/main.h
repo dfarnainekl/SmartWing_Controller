@@ -29,6 +29,15 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal.h"
+#include "stm32h7xx_ll_system.h"
+#include "stm32h7xx_ll_gpio.h"
+#include "stm32h7xx_ll_exti.h"
+#include "stm32h7xx_ll_bus.h"
+#include "stm32h7xx_ll_cortex.h"
+#include "stm32h7xx_ll_rcc.h"
+#include "stm32h7xx_ll_utils.h"
+#include "stm32h7xx_ll_pwr.h"
+#include "stm32h7xx_ll_dma.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -58,26 +67,48 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define LED_GREEN_Pin GPIO_PIN_15
+#define LED_GREEN_Pin LL_GPIO_PIN_15
 #define LED_GREEN_GPIO_Port GPIOB
-#define LED_RED_Pin GPIO_PIN_9
+#define LED_RED_Pin LL_GPIO_PIN_9
 #define LED_RED_GPIO_Port GPIOD
-#define DRV2_CSN_DRV_Pin GPIO_PIN_11
+#define DRV2_CSN_DRV_Pin LL_GPIO_PIN_11
 #define DRV2_CSN_DRV_GPIO_Port GPIOD
-#define DRV2_CSN_ENC_Pin GPIO_PIN_14
+#define DRV2_CSN_ENC_Pin LL_GPIO_PIN_14
 #define DRV2_CSN_ENC_GPIO_Port GPIOD
-#define DRV2_CSN_CTR_Pin GPIO_PIN_6
+#define DRV2_CSN_CTR_Pin LL_GPIO_PIN_6
 #define DRV2_CSN_CTR_GPIO_Port GPIOC
-#define DRV2_STATUS_Pin GPIO_PIN_12
+#define DRV2_STATUS_Pin LL_GPIO_PIN_12
 #define DRV2_STATUS_GPIO_Port GPIOC
-#define CAN1_STBY_Pin GPIO_PIN_2
+#define CAN1_STBY_Pin LL_GPIO_PIN_2
 #define CAN1_STBY_GPIO_Port GPIOD
-#define DRV2_FAULT_Pin GPIO_PIN_4
+#define DRV2_FAULT_Pin LL_GPIO_PIN_4
 #define DRV2_FAULT_GPIO_Port GPIOD
-#define DRV2_EN_Pin GPIO_PIN_7
+#define DRV2_EN_Pin LL_GPIO_PIN_7
 #define DRV2_EN_GPIO_Port GPIOD
-#define CAN2_STBY_Pin GPIO_PIN_9
+#define CAN2_STBY_Pin LL_GPIO_PIN_9
 #define CAN2_STBY_GPIO_Port GPIOB
+
+
+typedef enum
+{
+	NOICE = 0,
+	OOF,
+	OOF_NO_NEW_DATA,
+	OOF_CAN_INIT,
+	OOF_CAN_TX_FULL,
+	OOF_UNKNOWN_CMD,
+	OOF_WRONG_CHANNEL_TYPE,
+	OOF_NOT_IMPLEMENTED,
+	OOF_SPI_TXP_FULL,
+	OOF_SPI_RXP_FULL,
+	OOF_SPI_NO_EOT,
+	OOF_ADS_NO_RDY,
+	OOF_ADS_INIT,
+	OOF_TOO_LITTLE,
+	OOF_TOO_MUCH,
+	OOF_NOT_EQUAL,
+	OOF_NO_OP
+}Result_t;
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */

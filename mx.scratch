@@ -94,6 +94,7 @@
           </Aincludes>
           <Adefines/>
           <Cdefines>
+            <define>USE_FULL_LL_DRIVER</define>
             <define>USE_HAL_DRIVER</define>
             <define>STM32H743xx</define>
           </Cdefines>
@@ -108,9 +109,7 @@
           <definestoremove>
             <Adefines/>
             <Cdefines>
-              <define>USE_FULL_LL_DRIVER</define>
               <define>MBEDTLS_CONFIG_FILE="mbedtls_config.h"</define>
-              <define>USE_FULL_ASSERT=1U</define>
             </Cdefines>
             <Ldefines/>
           </definestoremove>

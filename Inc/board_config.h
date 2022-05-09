@@ -1,0 +1,41 @@
+#ifndef HARDWARE_BOARD_CONFIG_H_
+#define HARDWARE_BOARD_CONFIG_H_
+
+#define LCB  1
+#define IOB  2
+#define BLMB 3
+
+#define BOARD BLMB
+
+#define SPI_TIMEOUT_VALUE 1000
+#define FLASH_TIMEOUT_VALUE 1000
+#include "boards/blmb.h"
+
+#if BOARD == LCB
+#define MAIN_CAN_BUS LCB_MAIN_CAN_BUS
+#elif BOARD == IOB
+#define MAIN_CAN_BUS IOB_MAIN_CAN_BUS
+#elif BOARD == BLMB
+#define MAIN_CAN_BUS BLMB_MAIN_CAN_BUS
+#endif
+#define DEBUG_CAN_BUS 1
+
+//#define DEBUG_THRESHOLDS
+//#define DEBUG_DATA
+//#define CAN_DEBUG_SEND
+//#define CAN_DEBUG_RECEIVE_ALL
+//#define CAN_DEBUG_RECEIVE
+
+//#define DEFAULT_REFRESH_DIVIDER		100
+
+#define DEFAULT_REFRESH_DIVIDER		1
+#define DEFAULT_REFRESH_RATE		100 //TODO FIX : is hardcoded to 50Hz
+
+#define SPI_TIMEOUT_VALUE 1000
+
+#define LED_STATUS_1_Pin LL_GPIO_PIN_15
+#define LED_STATUS_1_GPIO_Port GPIOB
+#define LED_STATUS_2_Pin LL_GPIO_PIN_9
+#define LED_STATUS_2_GPIO_Port GPIOD
+
+#endif
