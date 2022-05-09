@@ -60,13 +60,6 @@ void BLMB_LoadSettings(void)
 //	Serial_PrintInt(servo->endpoint);
 }
 
-
-uint32_t BLMB_CalcMotorPos(uint32_t var)
-{
-	return (uint32_t) (BLMB_REDUCTION * var);
-}
-
-
 Servo_Channel_t* servo;
 
 
@@ -97,7 +90,7 @@ void logic_init(void)
 
 	HAL_Delay(100);
 
-//	TMC4671_highLevel_referenceEndStop(1); // also actiavtes position mode
+	TMC4671_highLevel_referenceEndStop(1); // also actiavtes position mode
 
 	HAL_Delay(100);
 }
@@ -114,21 +107,22 @@ void logic_loop(void)
 
 	Can_checkFifo(BLMB_MAIN_CAN_BUS);
 
-	servo->position = TMC4671_highLevel_getPositionActual(1);
+	servo->position = TMC4671_highLevel_getPositionActual(1) / BLMB_REDUCTION / 4;
+
 	Servo_GetRawData(BLMB_SERVO_CHANNEL, NULL); // sets servo->position_percentage
 
-	TMC4671_highLevel_setPosition(1, BLMB_CalcMotorPos(servo->target_position));
+	TMC4671_highLevel_setPosition(1, servo->target_position * BLMB_REDUCTION);
 
 	torque = TMC4671_highLevel_getTorqueActual(1);
 
-	//if position close to target, turn off motor FIXME
+	//if position close to target, turn off motor
 	if(systick_tick)
 	{
 		systick_tick = false;
 
 		static uint16_t angle_correct_counter_1 = 0;
 
-		if(abs(TMC4671_highLevel_getPositionActual(1) - TMC4671_highLevel_getPositionTarget(1)) < 2000)
+		if(abs(TMC4671_highLevel_getPositionActual(1) - TMC4671_highLevel_getPositionTarget(1)) < 1000)
 		{
 			if(angle_correct_counter_1 < 65535) angle_correct_counter_1++;
 		}
