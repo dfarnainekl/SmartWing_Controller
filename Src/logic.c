@@ -20,7 +20,7 @@
 #define NODE_ID 3
 
 
-static AdcData_t *torque_ptr = NULL;
+static AdcData_t torque = 0;
 
 Node_t node = { .node_id = 0, .firmware_version = 0xdeadbeef,
 		        .generic_channel = { NULL, NULL, NULL, NULL, DEFAULT_REFRESH_DIVIDER, DEFAULT_REFRESH_RATE },
@@ -76,7 +76,7 @@ void logic_init(void)
 	Can_Init(node.node_id);
 
 	Servo_InitChannel(&node.channels[BLMB_SERVO_CHANNEL].channel.servo);
-	node.channels[2].channel.adc16.analog_in = torque_ptr;
+	node.channels[2].channel.adc16.analog_in = &torque;
 	BLMB_LoadSettings();
 	servo = &node.channels[BLMB_SERVO_CHANNEL].channel.servo;
 
@@ -97,7 +97,7 @@ void logic_init(void)
 
 	HAL_Delay(100);
 
-	TMC4671_highLevel_referenceEndStop(1); // also actiavtes position mode
+//	TMC4671_highLevel_referenceEndStop(1); // also actiavtes position mode
 
 	HAL_Delay(100);
 }
@@ -119,8 +119,7 @@ void logic_loop(void)
 
 	TMC4671_highLevel_setPosition(1, BLMB_CalcMotorPos(servo->target_position));
 
-	*torque_ptr = TMC4671_highLevel_getTorqueActual(1);
-
+	torque = TMC4671_highLevel_getTorqueActual(1);
 
 	//if position close to target, turn off motor FIXME
 	if(systick_tick)

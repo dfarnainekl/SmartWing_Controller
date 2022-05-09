@@ -87,8 +87,7 @@ void Error_Handler(void);
 #define DRV2_EN_GPIO_Port GPIOD
 #define CAN2_STBY_Pin LL_GPIO_PIN_9
 #define CAN2_STBY_GPIO_Port GPIOB
-
-
+/* USER CODE BEGIN Private defines */
 typedef enum
 {
 	NOICE = 0,
@@ -109,8 +108,6 @@ typedef enum
 	OOF_NOT_EQUAL,
 	OOF_NO_OP
 }Result_t;
-/* USER CODE BEGIN Private defines */
-
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

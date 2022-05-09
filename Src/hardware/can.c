@@ -8,6 +8,7 @@
 #include <string.h>
 #include "stm32h7xx_ll_gpio.h"
 #include "main.h"
+#include "fdcan.h"
 
 #define CAN_MESSAGE_RAM_START_ADDRESS (0x4000AC00)
 #define BIT_2_TO_15_MASK         0x0000fffc //TODO Add to memory mapping
@@ -93,431 +94,261 @@ FDCAN2, (Can_Message_RAM*) (CAN_MESSAGE_RAM_START_ADDRESS + sizeof(Can_Message_R
 
 static Result_t Can_SetRamBlockAddresses(uint32_t can_handle_index)
 {
-	FDCAN_GlobalTypeDef *can = handles[can_handle_index].can;
-	Can_Message_RAM *can_ram = handles[can_handle_index].can_ram;
-	MODIFY_REG(can->SIDFC, FDCAN_SIDFC_FLSSA, ((uint32_t)can_ram->std_filters - CAN_MESSAGE_RAM_START_ADDRESS));	// Standard filter list start address
-	MODIFY_REG(can->SIDFC, FDCAN_SIDFC_LSS, (CAN_STD_FILTER_NUMBER << FDCAN_SIDFC_LSS_Pos)); // Standard filter elements number
-	MODIFY_REG(can->XIDFC, FDCAN_XIDFC_FLESA, ((uint32_t)can_ram->ext_filters - CAN_MESSAGE_RAM_START_ADDRESS));	// Extended filter list start address
-	MODIFY_REG(can->XIDFC, FDCAN_XIDFC_LSE, (CAN_EXT_FILTER_NUMBER << FDCAN_XIDFC_LSE_Pos)); // Extended filter elements number
-	MODIFY_REG(can->RXF0C, FDCAN_RXF0C_F0SA, ((uint32_t)can_ram->rx_fifo0 - CAN_MESSAGE_RAM_START_ADDRESS)); // Rx FIFO 0 start address
-	MODIFY_REG(can->RXF0C, FDCAN_RXF0C_F0S, (CAN_RX_FIFO0_ELMTS_NUMBER << FDCAN_RXF0C_F0S_Pos)); // Rx FIFO 0 elements number
-	MODIFY_REG(can->RXF1C, FDCAN_RXF1C_F1SA, ((uint32_t)can_ram->rx_fifo1 - CAN_MESSAGE_RAM_START_ADDRESS)); // Rx FIFO 1 start address
-	MODIFY_REG(can->RXF1C, FDCAN_RXF1C_F1S, (CAN_RX_FIFO1_ELMTS_NUMBER << FDCAN_RXF1C_F1S_Pos)); // Rx FIFO 1 elements number
-
-	MODIFY_REG(can->RXBC, FDCAN_RXBC_RBSA, ((uint32_t)can_ram->rx_buffer - CAN_MESSAGE_RAM_START_ADDRESS)); // Rx buffer list start address
-
-	MODIFY_REG(can->TXEFC, FDCAN_TXEFC_EFSA, ((uint32_t)can_ram->tx_fifo - CAN_MESSAGE_RAM_START_ADDRESS)); // Tx event FIFO start address
-	MODIFY_REG(can->TXEFC, FDCAN_TXEFC_EFS, (CAN_TX_EVENT_NUMBER << FDCAN_TXEFC_EFS_Pos)); // Tx event FIFO elements number
-
-	MODIFY_REG(can->TXBC, FDCAN_TXBC_TBSA, ((uint32_t)can_ram->tx_buffer - CAN_MESSAGE_RAM_START_ADDRESS)); // Tx buffer list start address
-	MODIFY_REG(can->TXBC, FDCAN_TXBC_NDTB, (CAN_TX_BUFFER_NUMBER << FDCAN_TXBC_NDTB_Pos)); // Dedicated Tx buffers number
-	MODIFY_REG(can->TXBC, FDCAN_TXBC_TFQS, ( CAN_TX_FIFO_QUEUE_ELMTS_NUMBER << FDCAN_TXBC_TFQS_Pos)); // Tx FIFO/Queue elements number
-	CLEAR_BIT(can->TXBC, FDCAN_TXBC_TFQM);
+//	FDCAN_GlobalTypeDef *can = handles[can_handle_index].can;
+//	Can_Message_RAM *can_ram = handles[can_handle_index].can_ram;
+//	MODIFY_REG(can->SIDFC, FDCAN_SIDFC_FLSSA, ((uint32_t)can_ram->std_filters - CAN_MESSAGE_RAM_START_ADDRESS));	// Standard filter list start address
+//	MODIFY_REG(can->SIDFC, FDCAN_SIDFC_LSS, (CAN_STD_FILTER_NUMBER << FDCAN_SIDFC_LSS_Pos)); // Standard filter elements number
+//	MODIFY_REG(can->XIDFC, FDCAN_XIDFC_FLESA, ((uint32_t)can_ram->ext_filters - CAN_MESSAGE_RAM_START_ADDRESS));	// Extended filter list start address
+//	MODIFY_REG(can->XIDFC, FDCAN_XIDFC_LSE, (CAN_EXT_FILTER_NUMBER << FDCAN_XIDFC_LSE_Pos)); // Extended filter elements number
+//	MODIFY_REG(can->RXF0C, FDCAN_RXF0C_F0SA, ((uint32_t)can_ram->rx_fifo0 - CAN_MESSAGE_RAM_START_ADDRESS)); // Rx FIFO 0 start address
+//	MODIFY_REG(can->RXF0C, FDCAN_RXF0C_F0S, (CAN_RX_FIFO0_ELMTS_NUMBER << FDCAN_RXF0C_F0S_Pos)); // Rx FIFO 0 elements number
+//	MODIFY_REG(can->RXF1C, FDCAN_RXF1C_F1SA, ((uint32_t)can_ram->rx_fifo1 - CAN_MESSAGE_RAM_START_ADDRESS)); // Rx FIFO 1 start address
+//	MODIFY_REG(can->RXF1C, FDCAN_RXF1C_F1S, (CAN_RX_FIFO1_ELMTS_NUMBER << FDCAN_RXF1C_F1S_Pos)); // Rx FIFO 1 elements number
+//
+//	MODIFY_REG(can->RXBC, FDCAN_RXBC_RBSA, ((uint32_t)can_ram->rx_buffer - CAN_MESSAGE_RAM_START_ADDRESS)); // Rx buffer list start address
+//
+//	MODIFY_REG(can->TXEFC, FDCAN_TXEFC_EFSA, ((uint32_t)can_ram->tx_fifo - CAN_MESSAGE_RAM_START_ADDRESS)); // Tx event FIFO start address
+//	MODIFY_REG(can->TXEFC, FDCAN_TXEFC_EFS, (CAN_TX_EVENT_NUMBER << FDCAN_TXEFC_EFS_Pos)); // Tx event FIFO elements number
+//
+//	MODIFY_REG(can->TXBC, FDCAN_TXBC_TBSA, ((uint32_t)can_ram->tx_buffer - CAN_MESSAGE_RAM_START_ADDRESS)); // Tx buffer list start address
+//	MODIFY_REG(can->TXBC, FDCAN_TXBC_NDTB, (CAN_TX_BUFFER_NUMBER << FDCAN_TXBC_NDTB_Pos)); // Dedicated Tx buffers number
+//	MODIFY_REG(can->TXBC, FDCAN_TXBC_TFQS, ( CAN_TX_FIFO_QUEUE_ELMTS_NUMBER << FDCAN_TXBC_TFQS_Pos)); // Tx FIFO/Queue elements number
+//	CLEAR_BIT(can->TXBC, FDCAN_TXBC_TFQM);
 
 	return NOICE;
 }
 Result_t Can_InitFdcan(uint32_t can_handle_index)
 {
-	FDCAN_GlobalTypeDef *can = handles[can_handle_index].can;
-	//Can_Message_RAM *can_ram = handles[can_handle_index].can_ram;
-	LL_RCC_SetFDCANClockSource(LL_RCC_FDCAN_CLKSOURCE_PLL2Q);
-
-	const uint32_t CvtEltSize[] =
-	{ 0, 0, 0, 0, 0, 1, 2, 3, 4, 0, 5, 0, 0, 0, 6, 0, 0, 0, 7 };
-
-	CLEAR_BIT(can->CCCR, FDCAN_CCCR_CSR);
-
-//	uint32_t tickstart = Systick_GetTick();
-
-	// Check Sleep mode acknowledge
-	while ((can->CCCR & FDCAN_CCCR_CSA) == FDCAN_CCCR_CSA);
+//	FDCAN_GlobalTypeDef *can = handles[can_handle_index].can;
+//	//Can_Message_RAM *can_ram = handles[can_handle_index].can_ram;
+//	LL_RCC_SetFDCANClockSource(LL_RCC_FDCAN_CLKSOURCE_PLL2Q);
+//
+//	const uint32_t CvtEltSize[] =
+//	{ 0, 0, 0, 0, 0, 1, 2, 3, 4, 0, 5, 0, 0, 0, 6, 0, 0, 0, 7 };
+//
+//	CLEAR_BIT(can->CCCR, FDCAN_CCCR_CSR);
+//
+////	uint32_t tickstart = Systick_GetTick();
+//
+//	// Check Sleep mode acknowledge
+//	while ((can->CCCR & FDCAN_CCCR_CSA) == FDCAN_CCCR_CSA);
+////	{
+////		if ((Systick_GetTick() - tickstart) > CAN_TIMEOUT_VALUE)
+////			return OOF_CAN_INIT;
+////	}
+//
+//	SET_BIT(can->CCCR, FDCAN_CCCR_INIT);
+//
+////	tickstart = Systick_GetTick();
+//
+//	// Wait until the INIT bit into CCCR register is set
+//	while ((can->CCCR & FDCAN_CCCR_INIT) == 0U);
+////	{
+////		if ((Systick_GetTick() - tickstart) > CAN_TIMEOUT_VALUE)
+////			return OOF_CAN_INIT;
+////	}
+//
+//	// Enable configuration change
+//	SET_BIT(can->CCCR, FDCAN_CCCR_CCE);
+//
+//	//CLEAR_BIT(can->CCCR, FDCAN_CCCR_DAR);  //AutoRetransmission Enabled
+//	SET_BIT(can->CCCR, FDCAN_CCCR_DAR);  //AutoRetransmission Disabled
+//
+//	//SET_BIT(can->CCCR, FDCAN_CCCR_TXP);    //transmit pause Enabled
+//	CLEAR_BIT(can->CCCR, FDCAN_CCCR_TXP);  //transmit pause Disabled
+//
+//	//CLEAR_BIT(can->CCCR, FDCAN_CCCR_PXHD); //Protocol Exception Handling Enabled
+//	SET_BIT(can->CCCR, FDCAN_CCCR_PXHD); //Protocol Exception Handling  Disabled
+//
+//	SET_BIT(can->CCCR, FDCAN_CCCR_BRSE);
+//
+//	SET_BIT(can->CCCR, FDCAN_CCCR_FDOE);
+//	CLEAR_BIT(can->CCCR, (FDCAN_CCCR_TEST | FDCAN_CCCR_MON | FDCAN_CCCR_ASM));
+//	CLEAR_BIT(can->TEST, FDCAN_TEST_LBCK);
+//
+//	// Set FDCAN Operating Mode:
+//	//           | Normal | Restricted |    Bus     | Internal | External
+//	//           |        | Operation  | Monitoring | LoopBack | LoopBack
+//	// CCCR.TEST |   0    |     0      |     0      |    1     |    1
+//	// CCCR.MON  |   0    |     0      |     1      |    1     |    0
+//	// TEST.LBCK |   0    |     0      |     0      |    1     |    1
+//	// CCCR.ASM  |   0    |     1      |     0      |    0     |    0
+//
+//	// Set the nominal bit timing register
+//	can->NBTP = ((((uint32_t) CAN_NOMINAL_SYNC_JUMP_WIDTH - 1U) << FDCAN_NBTP_NSJW_Pos) | (((uint32_t) CAN_NOMINAL_TIMESEG_1 - 1U) << FDCAN_NBTP_NTSEG1_Pos) | (((uint32_t) CAN_NOMINAL_TIMESEG_2 - 1U) << FDCAN_NBTP_NTSEG2_Pos) | (((uint32_t) CAN_NOMINAL_PRESCALER - 1U) << FDCAN_NBTP_NBRP_Pos));
+//
+//	// Bit Rate Switching Enable
+//	can->DBTP = ((((uint32_t) CAN_DATA_SYNC_JUMP_WIDTH - 1U) << FDCAN_DBTP_DSJW_Pos) | (((uint32_t) CAN_DATA_TIMESEG_1 - 1U) << FDCAN_DBTP_DTSEG1_Pos) | (((uint32_t) CAN_DATA_TIMESEG_2 - 1U) << FDCAN_DBTP_DTSEG2_Pos) | (((uint32_t) CAN_DATA_PRESCALER - 1U) << FDCAN_DBTP_DBRP_Pos));
+//
+//	if (CAN_TX_FIFO_QUEUE_ELMTS_NUMBER > 0U)	// Select between Tx FIFO and Tx Queue operation modes
+//		SET_BIT(can->TXBC, CAN_TX_FIFO_QUEUE_MODE);
+//
+//	// Configure Tx element size
+//	if ((CAN_TX_BUFFER_NUMBER + CAN_TX_FIFO_QUEUE_ELMTS_NUMBER) > 0U)
+//		MODIFY_REG(can->TXESC, FDCAN_TXESC_TBDS, CvtEltSize[CAN_TX_ELMTS_SIZE]);
+//
+//	// Configure Rx FIFO 0 element size
+//	if (CAN_RX_FIFO0_ELMTS_NUMBER > 0U)
+//		MODIFY_REG(can->RXESC, FDCAN_RXESC_F0DS, (CvtEltSize[CAN_RX_FIFO0_ELMTS_SIZE] << FDCAN_RXESC_F0DS_Pos));
+//
+//	// Configure Rx FIFO 1 element size
+//	if (CAN_RX_FIFO1_ELMTS_NUMBER > 0U)
+//		MODIFY_REG(can->RXESC, FDCAN_RXESC_F1DS, (CvtEltSize[CAN_RX_FIFO1_ELMTS_SIZE] << FDCAN_RXESC_F1DS_Pos));
+//
+//	/* Configure Rx buffer element size */
+//	if (CAN_RX_BUFFER_NUMBER > 0U)
+//		MODIFY_REG(can->RXESC, FDCAN_RXESC_RBDS, (CvtEltSize[CAN_RX_BUFFER_SIZE] << FDCAN_RXESC_RBDS_Pos));
+//
+//	//TODO: TTCAN maybe?
+//	// By default operation mode is set to Event-driven communication.
+//	// If Time-triggered communication is needed, user should call the
+//	// HAL_FDCAN_TT_ConfigOperation function just after the HAL_FDCAN_Init
+//	//	TTCAN_TypeDef *ttcan = (TTCAN_TypeDef*) ((uint32_t) can + 0x100U);
+//	//if (hfdcan->Instance == FDCAN1)
+//	//		CLEAR_BIT(hfdcan->ttcan->TTOCF, FDCAN_TTOCF_OM);
+//
+//	// Calculate each RAM block address
+//	Result_t result = Can_SetRamBlockAddresses(can_handle_index);
+//	if (result != NOICE)
+//		return result;
+//
+//	//Config TxDelayCompensation
+//	can->TDCR = ((CAN_TDC_FILTER << FDCAN_TDCR_TDCF_Pos) | (CAN_TDC_OFFSET << FDCAN_TDCR_TDCO_Pos));
+//
+//	// Enable transmitter delay compensation
+//	SET_BIT(can->DBTP, FDCAN_DBTP_TDC);
+//
+//	if (can == FDCAN1)
 //	{
-//		if ((Systick_GetTick() - tickstart) > CAN_TIMEOUT_VALUE)
-//			return OOF_CAN_INIT;
+//#ifdef CAN_DEBUG_RECEIVE_ALL
+//		//Accept everything
+//		can->GFC = ((FDCAN_ACCEPT_IN_RX_FIFO1 << FDCAN_GFC_ANFS_Pos) | (FDCAN_ACCEPT_IN_RX_FIFO1 << FDCAN_GFC_ANFE_Pos) | (FDCAN_FILTER_REMOTE << FDCAN_GFC_RRFS_Pos) | (FDCAN_REJECT_REMOTE << FDCAN_GFC_RRFE_Pos));
+//#else
+//		// Configure global filter to reject everything
+//		can->GFC = ((FDCAN_REJECT << FDCAN_GFC_ANFS_Pos) | (FDCAN_REJECT << FDCAN_GFC_ANFE_Pos) | (FDCAN_FILTER_REMOTE << FDCAN_GFC_RRFS_Pos) | (FDCAN_REJECT_REMOTE << FDCAN_GFC_RRFE_Pos));
+//#endif
+//
 //	}
-
-	SET_BIT(can->CCCR, FDCAN_CCCR_INIT);
-
-//	tickstart = Systick_GetTick();
-
-	// Wait until the INIT bit into CCCR register is set
-	while ((can->CCCR & FDCAN_CCCR_INIT) == 0U);
-//	{
-//		if ((Systick_GetTick() - tickstart) > CAN_TIMEOUT_VALUE)
-//			return OOF_CAN_INIT;
-//	}
-
-	// Enable configuration change
-	SET_BIT(can->CCCR, FDCAN_CCCR_CCE);
-
-	//CLEAR_BIT(can->CCCR, FDCAN_CCCR_DAR);  //AutoRetransmission Enabled
-	SET_BIT(can->CCCR, FDCAN_CCCR_DAR);  //AutoRetransmission Disabled
-
-	//SET_BIT(can->CCCR, FDCAN_CCCR_TXP);    //transmit pause Enabled
-	CLEAR_BIT(can->CCCR, FDCAN_CCCR_TXP);  //transmit pause Disabled
-
-	//CLEAR_BIT(can->CCCR, FDCAN_CCCR_PXHD); //Protocol Exception Handling Enabled
-	SET_BIT(can->CCCR, FDCAN_CCCR_PXHD); //Protocol Exception Handling  Disabled
-
-	SET_BIT(can->CCCR, FDCAN_CCCR_BRSE);
-
-	SET_BIT(can->CCCR, FDCAN_CCCR_FDOE);
-	CLEAR_BIT(can->CCCR, (FDCAN_CCCR_TEST | FDCAN_CCCR_MON | FDCAN_CCCR_ASM));
-	CLEAR_BIT(can->TEST, FDCAN_TEST_LBCK);
-
-	// Set FDCAN Operating Mode:
-	//           | Normal | Restricted |    Bus     | Internal | External
-	//           |        | Operation  | Monitoring | LoopBack | LoopBack
-	// CCCR.TEST |   0    |     0      |     0      |    1     |    1
-	// CCCR.MON  |   0    |     0      |     1      |    1     |    0
-	// TEST.LBCK |   0    |     0      |     0      |    1     |    1
-	// CCCR.ASM  |   0    |     1      |     0      |    0     |    0
-
-	// Set the nominal bit timing register
-	can->NBTP = ((((uint32_t) CAN_NOMINAL_SYNC_JUMP_WIDTH - 1U) << FDCAN_NBTP_NSJW_Pos) | (((uint32_t) CAN_NOMINAL_TIMESEG_1 - 1U) << FDCAN_NBTP_NTSEG1_Pos) | (((uint32_t) CAN_NOMINAL_TIMESEG_2 - 1U) << FDCAN_NBTP_NTSEG2_Pos) | (((uint32_t) CAN_NOMINAL_PRESCALER - 1U) << FDCAN_NBTP_NBRP_Pos));
-
-	// Bit Rate Switching Enable
-	can->DBTP = ((((uint32_t) CAN_DATA_SYNC_JUMP_WIDTH - 1U) << FDCAN_DBTP_DSJW_Pos) | (((uint32_t) CAN_DATA_TIMESEG_1 - 1U) << FDCAN_DBTP_DTSEG1_Pos) | (((uint32_t) CAN_DATA_TIMESEG_2 - 1U) << FDCAN_DBTP_DTSEG2_Pos) | (((uint32_t) CAN_DATA_PRESCALER - 1U) << FDCAN_DBTP_DBRP_Pos));
-
-	if (CAN_TX_FIFO_QUEUE_ELMTS_NUMBER > 0U)	// Select between Tx FIFO and Tx Queue operation modes
-		SET_BIT(can->TXBC, CAN_TX_FIFO_QUEUE_MODE);
-
-	// Configure Tx element size
-	if ((CAN_TX_BUFFER_NUMBER + CAN_TX_FIFO_QUEUE_ELMTS_NUMBER) > 0U)
-		MODIFY_REG(can->TXESC, FDCAN_TXESC_TBDS, CvtEltSize[CAN_TX_ELMTS_SIZE]);
-
-	// Configure Rx FIFO 0 element size
-	if (CAN_RX_FIFO0_ELMTS_NUMBER > 0U)
-		MODIFY_REG(can->RXESC, FDCAN_RXESC_F0DS, (CvtEltSize[CAN_RX_FIFO0_ELMTS_SIZE] << FDCAN_RXESC_F0DS_Pos));
-
-	// Configure Rx FIFO 1 element size
-	if (CAN_RX_FIFO1_ELMTS_NUMBER > 0U)
-		MODIFY_REG(can->RXESC, FDCAN_RXESC_F1DS, (CvtEltSize[CAN_RX_FIFO1_ELMTS_SIZE] << FDCAN_RXESC_F1DS_Pos));
-
-	/* Configure Rx buffer element size */
-	if (CAN_RX_BUFFER_NUMBER > 0U)
-		MODIFY_REG(can->RXESC, FDCAN_RXESC_RBDS, (CvtEltSize[CAN_RX_BUFFER_SIZE] << FDCAN_RXESC_RBDS_Pos));
-
-	//TODO: TTCAN maybe?
-	// By default operation mode is set to Event-driven communication.
-	// If Time-triggered communication is needed, user should call the
-	// HAL_FDCAN_TT_ConfigOperation function just after the HAL_FDCAN_Init
-	//	TTCAN_TypeDef *ttcan = (TTCAN_TypeDef*) ((uint32_t) can + 0x100U);
-	//if (hfdcan->Instance == FDCAN1)
-	//		CLEAR_BIT(hfdcan->ttcan->TTOCF, FDCAN_TTOCF_OM);
-
-	// Calculate each RAM block address
-	Result_t result = Can_SetRamBlockAddresses(can_handle_index);
-	if (result != NOICE)
-		return result;
-
-	//Config TxDelayCompensation
-	can->TDCR = ((CAN_TDC_FILTER << FDCAN_TDCR_TDCF_Pos) | (CAN_TDC_OFFSET << FDCAN_TDCR_TDCO_Pos));
-
-	// Enable transmitter delay compensation
-	SET_BIT(can->DBTP, FDCAN_DBTP_TDC);
-
-	if (can == FDCAN1)
-	{
-#ifdef CAN_DEBUG_RECEIVE_ALL
-		//Accept everything
-		can->GFC = ((FDCAN_ACCEPT_IN_RX_FIFO1 << FDCAN_GFC_ANFS_Pos) | (FDCAN_ACCEPT_IN_RX_FIFO1 << FDCAN_GFC_ANFE_Pos) | (FDCAN_FILTER_REMOTE << FDCAN_GFC_RRFS_Pos) | (FDCAN_REJECT_REMOTE << FDCAN_GFC_RRFE_Pos));
-#else
-		// Configure global filter to reject everything
-		can->GFC = ((FDCAN_REJECT << FDCAN_GFC_ANFS_Pos) | (FDCAN_REJECT << FDCAN_GFC_ANFE_Pos) | (FDCAN_FILTER_REMOTE << FDCAN_GFC_RRFS_Pos) | (FDCAN_REJECT_REMOTE << FDCAN_GFC_RRFE_Pos));
-#endif
-
-	}
-
-
-	if (can == FDCAN2)	//Accept everything
-		can->GFC = ((FDCAN_ACCEPT_IN_RX_FIFO1 << FDCAN_GFC_ANFS_Pos) | (FDCAN_ACCEPT_IN_RX_FIFO1 << FDCAN_GFC_ANFE_Pos) | (FDCAN_FILTER_REMOTE << FDCAN_GFC_RRFS_Pos) | (FDCAN_REJECT_REMOTE << FDCAN_GFC_RRFE_Pos));
-
-	//Can Start
-	CLEAR_BIT(can->CCCR, FDCAN_CCCR_INIT);
-
-	HAL_Delay(100);
+//
+//
+//	if (can == FDCAN2)	//Accept everything
+//		can->GFC = ((FDCAN_ACCEPT_IN_RX_FIFO1 << FDCAN_GFC_ANFS_Pos) | (FDCAN_ACCEPT_IN_RX_FIFO1 << FDCAN_GFC_ANFE_Pos) | (FDCAN_FILTER_REMOTE << FDCAN_GFC_RRFS_Pos) | (FDCAN_REJECT_REMOTE << FDCAN_GFC_RRFE_Pos));
+//
+//	//Can Start
+//	CLEAR_BIT(can->CCCR, FDCAN_CCCR_INIT);
+//
+//	HAL_Delay(100);
 	return NOICE;
 }
 
 void Can_ClockCalibration(void)
 {
 
-	/* Bypass clock calibration */
-	SET_BIT(FDCAN_CCU->CCFG, FDCANCCU_CCFG_BCC);
-
-	/* Configure clock divider */
-	MODIFY_REG(FDCAN_CCU->CCFG, FDCANCCU_CCFG_CDIV, FDCAN_CLOCK_DIV1);
+//	/* Bypass clock calibration */
+//	SET_BIT(FDCAN_CCU->CCFG, FDCANCCU_CCFG_BCC);
+//
+//	/* Configure clock divider */
+//	MODIFY_REG(FDCAN_CCU->CCFG, FDCANCCU_CCFG_CDIV, FDCAN_CLOCK_DIV1);
 
 }
 
 void Can_InitGPIO(void)
 {
-	LL_GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-
-	LL_RCC_SetFDCANClockSource(LL_RCC_FDCAN_CLKSOURCE_PLL2Q);
-
-	LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_FDCAN);
-	LL_AHB4_GRP1_EnableClock(LL_AHB4_GRP1_PERIPH_GPIOD);
-	LL_AHB4_GRP1_EnableClock(LL_AHB4_GRP1_PERIPH_GPIOB);
-
-	// CAN 1
-	GPIO_InitStruct.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1;
-	GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-	GPIO_InitStruct.Alternate = LL_GPIO_AF_9;
-	LL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-	// CAN 1 sleep
-	GPIO_InitStruct.Pin = LL_GPIO_PIN_2;
-	GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	LL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-	LL_GPIO_ResetOutputPin(GPIOD, LL_GPIO_PIN_2);
-
-	//CAN2
-	GPIO_InitStruct.Pin = LL_GPIO_PIN_5 | LL_GPIO_PIN_6;
-	GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-	GPIO_InitStruct.Alternate = LL_GPIO_AF_9;
-	LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-	// CAN 2 sleep
-	GPIO_InitStruct.Pin = LL_GPIO_PIN_9;
-	GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
-	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
-	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-	LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-	LL_GPIO_ResetOutputPin(GPIOB, LL_GPIO_PIN_9);
+//	LL_GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+//
+//	LL_RCC_SetFDCANClockSource(LL_RCC_FDCAN_CLKSOURCE_PLL2Q);
+//
+//	LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_FDCAN);
+//	LL_AHB4_GRP1_EnableClock(LL_AHB4_GRP1_PERIPH_GPIOD);
+//	LL_AHB4_GRP1_EnableClock(LL_AHB4_GRP1_PERIPH_GPIOB);
+//
+//	// CAN 1
+//	GPIO_InitStruct.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1;
+//	GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+//	GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+//	GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+//	GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+//	GPIO_InitStruct.Alternate = LL_GPIO_AF_9;
+//	LL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 }
 
 void Can_AddStdFilter(uint32_t can_handle_index, uint32_t filter_index, uint32_t mask, uint32_t filter_id, uint32_t target_location)
 {
-	Can_Message_RAM *can_ram = handles[can_handle_index].can_ram;
-
-	can_ram->std_filters[filter_index].S0.bit.SFEC = target_location; // e.g. FDCAN_FILTER_TO_RXFIFO0
-	can_ram->std_filters[filter_index].S0.bit.SFID1 = filter_id;
-	can_ram->std_filters[filter_index].S0.bit.SFID2 = mask;
-	can_ram->std_filters[filter_index].S0.bit.SFT = FDCAN_FILTER_MASK;
+//	Can_Message_RAM *can_ram = handles[can_handle_index].can_ram;
+//
+//	can_ram->std_filters[filter_index].S0.bit.SFEC = target_location; // e.g. FDCAN_FILTER_TO_RXFIFO0
+//	can_ram->std_filters[filter_index].S0.bit.SFID1 = filter_id;
+//	can_ram->std_filters[filter_index].S0.bit.SFID2 = mask;
+//	can_ram->std_filters[filter_index].S0.bit.SFT = FDCAN_FILTER_MASK;
 }
 Result_t Can_Init(uint8_t node_id)
 {
-	Result_t result = OOF;
-	Can_ClockCalibration();
-	Can_InitGPIO();
-	Can_MessageId_t mask =
-	{ 0 };
-	mask.info.direction = 0x1;
-	mask.info.node_id = 0x1F;
-	mask.info.special_cmd = 0x3;
-	Can_MessageId_t id =
-	{ 0 };
-	id.info.direction = MASTER2NODE_DIRECTION;
-	id.info.special_cmd = STANDARD_SPECIAL_CMD;
+//	HAL_FDCAN_ConfigTxDelayCompensation(&hfdcan1, 12, 0);
+//	HAL_FDCAN_EnableTxDelayCompensation(&hfdcan1);
+//
+//	HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
+//
+//	Can_MessageId_t mask = { 0 };
+//	mask.info.direction = 0x1;
+//	mask.info.node_id = 0x1F;
+//	mask.info.special_cmd = 0x3;
+//	Can_MessageId_t id = { 0 };
+//	id.info.direction = MASTER2NODE_DIRECTION;
+//	id.info.special_cmd = STANDARD_SPECIAL_CMD;
+//
+//	FDCAN_FilterTypeDef filter;
+//	filter.IdType = FDCAN_STANDARD_ID;
+//	filter.FilterType = FDCAN_FILTER_MASK;
+//	filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
+//	filter.FilterID2 = mask.uint32;
+//
+//	id.info.node_id = node_id;
+//	filter.FilterID1 = id.uint32;
+//	filter.FilterIndex = 0;
+//	HAL_FDCAN_ConfigFilter(&hfdcan1, &filter);
+//
+//	id.info.node_id = 0;
+//	filter.FilterID1 = id.uint32;
+//	filter.FilterIndex = 1;
+//	HAL_FDCAN_ConfigFilter(&hfdcan1, &filter);
 
-	result = Can_InitFdcan(MAIN_CAN_BUS);
-	if (result != NOICE)
-		return result;
-	id.info.node_id = node_id;
-	Can_AddStdFilter(MAIN_CAN_BUS, 0, mask.uint32, id.uint32, FDCAN_FILTER_TO_RXFIFO0);
-	id.info.node_id = 0;
-	Can_AddStdFilter(MAIN_CAN_BUS, 1, mask.uint32, id.uint32, FDCAN_FILTER_TO_RXFIFO0);
-
-	//TODO: remove for Debugging only
-	result = Can_InitFdcan(DEBUG_CAN_BUS);
-	if (result != NOICE)
-		return result;
+	HAL_FDCAN_Start(&hfdcan1);
 
 	return NOICE;
 }
 
 void Can_checkFifo(uint32_t can_handle_index)
 {
-	FDCAN_GlobalTypeDef *can = handles[can_handle_index].can;
-	Can_Message_RAM *can_ram = handles[can_handle_index].can_ram;
-	Can_MessageId_t id =
-	{ 0 };
-	uint32_t length = 0;
-	Can_MessageData_t data =
-	{ 0 };
-	//TODO Loop over both fifos
-	if (can->RXF0S & FDCAN_RXF0S_F0FL)	//Check FIFO 0
+	while(HAL_FDCAN_GetRxFifoFillLevel(&hfdcan1, FDCAN_RX_FIFO0) > 0)
 	{
-		uint8_t get_index = ((can->RXF0S >> 8) & 0x3F);
-		id.uint32 = can_ram->rx_fifo0[get_index].R0.bit.ID >> 18;
+		Can_MessageData_t data = { 0 };
+		FDCAN_RxHeaderTypeDef canHeader;
 
+		if(HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO0, &canHeader, data.uint8) != HAL_OK) return;
 
-#if defined(CAN_DEBUG_RECEIVE) || defined(CAN_DEBUG_RECEIVE_ALL)
-//		uint8_t is_extended = can_ram->rx_fifo0[get_index].R0.bit.XTD;
-		uint8_t is_remote_frame = can_ram->rx_fifo0[get_index].R0.bit.RTR;
-		uint8_t is_error_passiv = can_ram->rx_fifo0[get_index].R0.bit.ESI;
-#endif
-		uint32_t dlc = can_ram->rx_fifo0[get_index].R1.bit.DLC;
-		length = Can_DlcToLength[dlc];
-		memcpy(data.uint8, &can_ram->rx_fifo0[get_index].data.uint8[0], CAN_ELMTS_ARRAY_SIZE);
+		Can_MessageId_t id = { 0 };
+		id.uint32 = canHeader.Identifier;
+		uint32_t length = Can_DlcToLength[canHeader.DataLength >> 16];
 
-
-		//TODO @ANDI Add Debug thingi
-#ifdef CAN_DEBUG_RECEIVE
-		Serial_PutString("FDCAN ");
-		Serial_PrintInt(can_handle_index + 1);
-		Serial_PrintString("FIFO 0:  ");
-
-		Serial_PutString("id:  ");
-		Serial_PrintInt(id.uint32);
-		Serial_PutString("id.info.node_id:  ");
-		Serial_PrintInt(id.info.node_id);
-		Serial_PutString("is_remote_frame:  ");
-		Serial_PrintInt(is_remote_frame);
-		Serial_PutString("is_error_passiv:  ");
-		Serial_PrintInt(is_error_passiv);
-		Serial_PutString("dlc:  ");
-		Serial_PrintInt(dlc);
-
-		for (uint32_t c = 0; c < length; c++)
-		{
-			Serial_PutInt(c);
-			Serial_PutString(":  ");
-			Serial_PutInt(data.uint8[c]);
-			Serial_PutString("  ");
-			Serial_PrintHex(data.uint8[c]);
-		}
-#endif
-
-#ifdef CAN_DEBUG_RECEIVE_ALL
-/*
-		Serial_PutString("id.info.node_id:  ");
-		Serial_PrintInt(id.info.node_id);
-*/
-		if(id.info.node_id == 0)
-		{
-			Serial_PutString("id:  ");
-					Serial_PrintInt(id.uint32);
-					Serial_PutString("id.info.node_id:  ");
-					Serial_PrintInt(id.info.node_id);
-					Serial_PutString("is_remote_frame:  ");
-					Serial_PrintInt(is_remote_frame);
-					Serial_PutString("is_error_passiv:  ");
-					Serial_PrintInt(is_error_passiv);
-					Serial_PutString("dlc:  ");
-					Serial_PrintInt(dlc);
-
-					for (uint32_t c = 0; c < length; c++)
-					{
-						Serial_PutInt(c);
-						Serial_PutString(":  ");
-						Serial_PutInt(data.uint8[c]);
-						Serial_PutString("  ");
-						Serial_PrintHex(data.uint8[c]);
-					}
-		}
-#endif
 		Ui_ProcessCanMessage(id, &data, length);
-
-		can->RXF0A = get_index & 0x3F;
 	}
-	if (can->RXF1S & FDCAN_RXF1S_F1FL)	//Check FIFO 1
-	{
-		uint8_t get_index = ((can->RXF1S >> 8) & 0x3F);
-
-		id.uint32 = can_ram->rx_fifo1[get_index].R0.bit.ID >> 18;
-		//uint8_t is_extended = can_ram->rx_fifo1[get_index].R0.bit.XTD;
-		//uint8_t is_remote_frame = can_ram->rx_fifo1[get_index].R0.bit.RTR;
-		//uint8_t is_error_passiv = can_ram->rx_fifo1[get_index].R0.bit.ESI;
-		uint32_t dlc = can_ram->rx_fifo1[get_index].R1.bit.DLC;
-		length = Can_DlcToLength[dlc];
-		memcpy(data.uint8, &can_ram->rx_fifo1[get_index].data.uint8[0], CAN_ELMTS_ARRAY_SIZE);
-
-
-		/*
-		//TODO @ANDI Add Debug thingi
-		Serial_PutString("FDCAN ");
-		Serial_PrintInt(can_handle_index + 1);
-		Serial_PrintString("FIFO 1:  ");
-
-		Serial_PutString("id:  ");
-		Serial_PrintInt(id.uint32);
-		Serial_PutString("id.info.node_id:  ");
-		Serial_PrintInt(id.info.node_id);
-		Serial_PutString("is_remote_frame:  ");
-		Serial_PrintInt(is_remote_frame);
-		Serial_PutString("is_error_passiv:  ");
-		Serial_PrintInt(is_error_passiv);
-		Serial_PutString("dlc:  ");
-		Serial_PrintInt(dlc);
-
-		for (uint32_t c = 0; c < length; c++)
-		{
-			Serial_PutInt(c);
-			Serial_PutString(":  ");
-			Serial_PutInt(data.uint8[c]);
-			Serial_PutString("  ");
-			Serial_PrintHex(data.uint8[c]);
-		}
-		*/
-
-
-		//Ui_ProcessCanMessage(id, &data, length);
-
-		can->RXF1A = get_index & 0x3F;
-	}
-
 }
 
 Result_t Can_sendMessage(uint32_t can_handle_index, uint32_t message_id, uint8_t *data, uint32_t length)
 {
-	HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
-	FDCAN_GlobalTypeDef *can = handles[can_handle_index].can;
-	Can_Message_RAM *can_ram = handles[can_handle_index].can_ram;
+	FDCAN_TxHeaderTypeDef canHeader;
+	canHeader.DataLength = (Can_LengthToDlc[length] << 16);
+	canHeader.TxFrameType = FDCAN_DATA_FRAME;
+	canHeader.BitRateSwitch = FDCAN_BRS_ON;
+	canHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	canHeader.FDFormat = FDCAN_FD_CAN;
+	canHeader.IdType = FDCAN_STANDARD_ID;
+	canHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+	canHeader.MessageMarker = 0;
+	canHeader.Identifier = message_id;
 
-	uint8_t index = ((FDCAN_TXFQS_TFQPI_Msk & can->TXFQS) >> FDCAN_TXFQS_TFQPI_Pos);
-	if ((can->TXFQS & FDCAN_TXFQS_TFFL) < 1)
-		return OOF_CAN_TX_FULL;
-	Can_Tx_Element *packet = &can_ram->tx_fifo[index];
+	if(HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &canHeader, data) != HAL_OK) return OOF_CAN_TX_FULL;
 
-	packet->T0.bit.XTD = 0;
-	packet->T0.bit.ID = message_id << 18;
-	packet->T0.bit.RTR = 0;
-	packet->T1.bit.FDF = 1;
-	packet->T1.bit.BRS = 1;
-	packet->T1.bit.DLC = Can_LengthToDlc[length];
-	packet->T1.bit.EFCC = 0;
-	packet->T1.bit.MM = 0;
-
-	uint32_t i = 0;
-	for (uint32_t c = 0; c < length; c += 4)
-		packet->data.uint32[i++] = data[c] | data[c + 1] << 8 | data[c + 2] << 16 | data[c + 3] << 24;
-	while (i < Can_DlcToLength[Can_LengthToDlc[length]] / 4)
-		packet->data.uint32[i++] = 0;
-
-
-
-	//TODO @ANDI Move to Debug_Print or something like that
-#ifdef CAN_DEBUG_SEND
-	Serial_PrintString("CAN SEND MESSAGE");
-	Serial_PutString("message_id: ");
-	Serial_PrintInt(message_id);
-	Serial_PutString("dlc: ");
-	Serial_PrintInt(packet->T1.bit.DLC);
-
-	for (uint32_t c = 0; c < length; c++)
-	{
-		Serial_PutInt(c);
-		Serial_PutString(":  ");
-		Serial_PutInt(packet->data.uint8[c]);
-		Serial_PutString("  ");
-		Serial_PrintHex(packet->data.uint8[c]);
-	}
-#endif
-
-	can->TXBAR = (1 << index);
-
-	HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
 	return NOICE;
 }
 

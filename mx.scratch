@@ -16,19 +16,13 @@
       <Secure/>
       <filestoremove>
         <file>
-          <name>Src/fdcan.c</name>
+          <name>Src/i2c.c</name>
         </file>
         <file>
           <name>../Src/custom.c</name>
         </file>
         <file>
-          <name>Src/i2c.c</name>
-        </file>
-        <file>
           <name>Src/usb_otg.c</name>
-        </file>
-        <file>
-          <name>Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_fdcan.c</name>
         </file>
         <file>
           <name>gpio.h</name>
@@ -59,6 +53,9 @@
         </file>
         <file>
           <name>main.h</name>
+        </file>
+        <file>
+          <name>stm32_assert.h</name>
         </file>
       </filestoremove>
       <sourceEntriesToRemove>
