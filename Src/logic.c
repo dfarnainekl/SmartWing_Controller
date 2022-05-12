@@ -19,6 +19,8 @@
 
 #define NODE_ID 3
 
+#define CLOSE_OFFSET (65535 * 4)
+
 
 static AdcData_t torque = 0;
 
@@ -90,7 +92,7 @@ void logic_init(void)
 
 	HAL_Delay(100);
 
-	TMC4671_highLevel_referenceEndStop(1); // also actiavtes position mode
+	TMC4671_highLevel_referenceEndStop(1); // also activates position mode
 
 	HAL_Delay(100);
 }
@@ -99,19 +101,13 @@ volatile static bool systick_tick = false;
 
 void logic_loop(void)
 {
-//	HAL_Delay(2000);
-//	TMC4671_highLevel_setPosition(1, 65535 * 4);
-//	HAL_Delay(2000);
-//	TMC4671_highLevel_setPosition(1, 0);
-
-
 	Can_checkFifo(BLMB_MAIN_CAN_BUS);
 
-	servo->position = TMC4671_highLevel_getPositionActual(1) / BLMB_REDUCTION / 4;
+	servo->position = (CLOSE_OFFSET - TMC4671_highLevel_getPositionActual(1)) / BLMB_REDUCTION / 4;
 
 	Servo_GetRawData(BLMB_SERVO_CHANNEL, NULL); // sets servo->position_percentage
 
-	TMC4671_highLevel_setPosition(1, servo->target_position * BLMB_REDUCTION);
+	TMC4671_highLevel_setPosition(1, CLOSE_OFFSET - servo->target_position * BLMB_REDUCTION);
 
 	torque = TMC4671_highLevel_getTorqueActual(1);
 
