@@ -451,7 +451,7 @@ void TMC4671_highLevel_openLoopTest3(uint8_t drv) // low duty cycle operation fo
 
 void TMC4671_highLevel_referenceEndStop(uint8_t drv)
 {
-	int32_t torque = 10000; // 20A
+	int32_t torque = 5000; // 10A
 
 	uint32_t torqueOld = tmc4671_readInt(drv, TMC4671_PID_TORQUE_FLUX_LIMITS);
 

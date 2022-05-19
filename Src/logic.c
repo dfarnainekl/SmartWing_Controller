@@ -22,9 +22,15 @@
 #define CLOSE_OFFSET (65535 * 4)
 
 
-static AdcData_t torque = 0;
+volatile static bool systick_tick = false;
 
-Node_t node = { .node_id = 0, .firmware_version = 0xdeadbeef,
+
+static AdcData_t torque = 0;
+static AdcData_t pressure = 0;
+
+Servo_Channel_t* servo;
+
+Node_t node = { .node_id = NODE_ID, .firmware_version = 0xdeadbeef,
 		        .generic_channel = { NULL, NULL, NULL, NULL, DEFAULT_REFRESH_DIVIDER, DEFAULT_REFRESH_RATE },
 				.channels =
 				{
@@ -35,9 +41,12 @@ Node_t node = { .node_id = 0, .firmware_version = 0xdeadbeef,
 			  };
 
 
-void BLMB_LoadSettings(void)
+void logic_init(void)
 {
-	Servo_Channel_t *servo = &node.channels[BLMB_SERVO_CHANNEL].channel.servo;
+	Can_Init(node.node_id);
+
+	servo = &node.channels[BLMB_SERVO_CHANNEL].channel.servo;
+
 	servo->startpoint = 0;
 	servo->endpoint = 65535;
 	servo->max_accel = 0;
@@ -47,8 +56,8 @@ void BLMB_LoadSettings(void)
 	servo->i_param = 0;
 	servo->d_param = 0;
 	servo->pwm_in_enabled = 0;
-	servo->refresh_divider = 0; // TODO ask about default setting
-	servo->pressure_control_enabled = 0;
+	servo->refresh_divider = 0;
+	servo->pressure_control_enabled = 0; // TODO: use this as well as target_pressure, deactivate or modify existing pressure control
 	servo->pos_p_param = 0;
 	servo->pos_i_param = 0;
 	servo->vel_p_param = 0;
@@ -56,24 +65,8 @@ void BLMB_LoadSettings(void)
 	servo->torq_p_param = 0;
 	servo->torq_i_param = 0;
 
-//	Serial_PutString("\r\nLoadSettings\r\nStartpoint: ");
-//	Serial_PutInt(servo->startpoint);
-//	Serial_PutString("\r\nEndpoint: ");
-//	Serial_PrintInt(servo->endpoint);
-}
-
-Servo_Channel_t* servo;
-
-
-void logic_init(void)
-{
-	node.node_id = NODE_ID;
-	Can_Init(node.node_id);
-
-	Servo_InitChannel(&node.channels[BLMB_SERVO_CHANNEL].channel.servo);
+	node.channels[1].channel.adc16.analog_in = &pressure;
 	node.channels[2].channel.adc16.analog_in = &torque;
-	BLMB_LoadSettings();
-	servo = &node.channels[BLMB_SERVO_CHANNEL].channel.servo;
 
 	HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 
@@ -94,10 +87,11 @@ void logic_init(void)
 
 	TMC4671_highLevel_referenceEndStop(1); // also activates position mode
 
-	HAL_Delay(100);
+	HAL_Delay(500);
+
+//	tmc4671_writeInt(1, TMC4671_PID_VELOCITY_LIMIT, 1000);
 }
 
-volatile static bool systick_tick = false;
 
 void logic_loop(void)
 {
@@ -109,7 +103,7 @@ void logic_loop(void)
 
 	TMC4671_highLevel_setPosition(1, CLOSE_OFFSET - servo->target_position * BLMB_REDUCTION);
 
-	torque = TMC4671_highLevel_getTorqueActual(1);
+	torque = (uint16_t)((int32_t)TMC4671_highLevel_getTorqueActual(1) - INT16_MIN);
 
 	//if position close to target, turn off motor
 	if(systick_tick)
@@ -152,7 +146,7 @@ void HAL_SYSTICK_Callback(void)
 	static int32_t refresh_counter = 0;
 	if(node.generic_channel.refresh_divider)
 	{
-		if(++refresh_counter >= (node.generic_channel.refresh_divider * 1000 / DEFAULT_REFRESH_RATE))
+		if(++refresh_counter >= (node.generic_channel.refresh_divider * 1000 / node.generic_channel.refresh_rate))
 		{
 			Generic_Data();
 			refresh_counter = 0;
