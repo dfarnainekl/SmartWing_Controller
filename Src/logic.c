@@ -19,7 +19,7 @@
 
 #define NODE_ID 3
 
-#define CLOSE_OFFSET (65535 * 5)
+#define CLOSE_OFFSET (65535 * 4)
 
 
 volatile static bool systick_tick = false;
